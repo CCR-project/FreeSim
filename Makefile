@@ -22,12 +22,6 @@ proof: Makefile.coq $(COQTHEORIES)
 Makefile.coq: Makefile $(COQTHEORIES)
 	(echo "-R lib $(COQMODULE)"; \
          echo "-R ems $(COQMODULE)"; \
-         echo "-R spc $(COQMODULE)"; \
-         echo "-R proofmode $(COQMODULE)"; \
-         echo "-R imp $(COQMODULE)"; \
-         echo "-R mem $(COQMODULE)"; \
-         echo "-R examples $(COQMODULE)"; \
-         echo "-R extract $(COQMODULE)"; \
    echo $(COQTHEORIES)) > _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
