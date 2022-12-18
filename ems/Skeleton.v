@@ -1,7 +1,6 @@
 Require Import Coqlib.
 Require Export ZArith.
 Require Import String.
-Require Import PCM.
 Require Export AList.
 
 Set Implicit Arguments.

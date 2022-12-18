@@ -5,7 +5,6 @@ Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
-Require Import PCM.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
