@@ -410,6 +410,112 @@ Section SIM.
     { punfold SIM. eapply sim_mon; eauto. i. pclearbot. auto. }
   Qed.
 
+  Variant sim_indC (sim: Ord.t -> Ord.t -> L0.(state) -> L1.(state) -> Prop)
+          (i_src0: Ord.t) (i_tgt0: Ord.t) (st_src0: L0.(state)) (st_tgt0: L1.(state)): Prop :=
+  | sim_indC_fin
+      retv
+      (SRT: _.(state_sort) st_src0 = final retv)
+      (SRT: _.(state_sort) st_tgt0 = final retv)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+
+  | sim_indC_vis
+      (SRT: _.(state_sort) st_src0 = vis)
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (SIM: forall ev st_tgt1
+          (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+        ,
+          exists st_src1 i_src1 i_tgt1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+            <<SIM: sim i_src1 i_tgt1 st_src1 st_tgt1>>)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+
+  | sim_indC_vis_stuck_tgt
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+  | sim_indC_demonic_src
+      (SRT: _.(state_sort) st_src0 = demonic)
+      (SIM: exists st_src1 i_src1
+                   (STEP: _.(step) st_src0 None st_src1)
+        ,
+          <<SIM: sim i_src1 i_tgt0 st_src1 st_tgt0>>)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+  | sim_indC_demonic_tgt
+      (SRT: _.(state_sort) st_tgt0 = demonic)
+      (SIM: forall st_tgt1
+                   (STEP: _.(step) st_tgt0 None st_tgt1)
+        ,
+          exists i_tgt1,
+          <<SIM: sim i_src0 i_tgt1 st_src0 st_tgt1>>)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+  | sim_indC_angelic_src
+      (SRT: _.(state_sort) st_src0 = angelic)
+      (SIM: forall st_src1
+          (STEP: _.(step) st_src0 None st_src1)
+        ,
+          exists i_src1,
+          <<SIM: sim i_src1 i_tgt0 st_src1 st_tgt0>>)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+  | sim_indC_angelic_tgt
+      (SRT: _.(state_sort) st_tgt0 = angelic)
+      (SIM: exists st_tgt1 i_tgt1
+          (STEP: _.(step) st_tgt0 None st_tgt1)
+        ,
+          <<SIM: sim i_src0 i_tgt1 st_src0 st_tgt1>>)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+  | sim_indC_progress
+      i_src1 i_tgt1
+      (SIM: sim i_src1 i_tgt1 st_src0 st_tgt0)
+      (SRC: (i_src1 < i_src0)%ord)
+      (TGT: (i_tgt1 < i_tgt0)%ord)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+  .
+
+  Lemma sim_indC_mon: monotone4 sim_indC.
+  Proof.
+    ii. inv IN; eauto.
+    { econs 1; eauto. }
+    { econs 2; eauto. i. exploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 3; eauto. }
+    { econs 4; eauto. des. esplits; eauto. }
+    { econs 5; eauto. i. hexploit SIM; eauto. i; des. esplits; et. }
+    { econs 6; eauto. i. hexploit SIM; eauto. i; des. esplits; et. }
+    { econs 7; eauto. des. esplits; eauto. }
+    { econs 8; eauto. }
+  Qed.
+  Hint Resolve sim_indC_mon: paco.
+
+  Lemma sim_indC_spec:
+    sim_indC <5= gupaco4 _sim (cpn4 _sim).
+  Proof.
+    eapply wrespect4_uclo; eauto with paco.
+    econs; eauto with paco. i. inv PR.
+    { econs 1; eauto. }
+    { econs 2; eauto. i. exploit SIM; eauto. i. des.
+      esplits; eauto. eapply rclo4_base. eauto. }
+    { econs 3; eauto. }
+    { econs 4; eauto. des. esplits; eauto.
+      eapply sim_mon; eauto. i. eapply rclo4_base. auto.
+    }
+    { econs 5; eauto. i. hexploit SIM; eauto. i. des. esplits.
+      eapply sim_mon; eauto. i. eapply rclo4_base. auto.
+    }
+    { econs 6; eauto. i. hexploit SIM; eauto. i. des. esplits.
+      eapply sim_mon; eauto. i. eapply rclo4_base. auto.
+    }
+    { econs 7; eauto. des. esplits; eauto.
+      eapply sim_mon; eauto. i. eapply rclo4_base. auto.
+    }
+    { econs 8; eauto. eapply rclo4_base. auto. }
+  Qed.
+
   Lemma adequacy_spin
         i_src0 i_tgt0 st_src0 st_tgt0
         (SIM: sim i_src0 i_tgt0 st_src0 st_tgt0)

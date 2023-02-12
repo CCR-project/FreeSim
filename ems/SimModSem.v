@@ -1031,7 +1031,7 @@ Section SIMMOD.
 
 End SIMMOD.
 
-Require Import SimGlobal.
+Require Import SimGlobalIndex.
 Require Import Red IRed.
 
 Module TAC.

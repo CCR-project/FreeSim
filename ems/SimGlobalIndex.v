@@ -10,7 +10,6 @@ Require Import Relation_Operators.
 Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 From Ordinal Require Import ClassicalOrdinal.
-Require Import SimSTS.
 
 Set Implicit Arguments.
 
@@ -1359,16 +1358,16 @@ End TRANS.
 Context {CONFS CONFT: EMSConfig}.
 Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
 
-Theorem adequacy_global_itree itr_src itr_tgt
-        (SIM: simg (fun _ _ => eq) 0 0 itr_src itr_tgt)
+Require Import SimSTSIndex.
+
+Theorem adequacy_global_itree itr_src itr_tgt o_src0 o_tgt0
+        (SIM: simg (fun _ _ => eq) o_src0 o_tgt0 itr_src itr_tgt)
   :
     Beh.of_program (@ModSemL.compile_itree CONFT itr_tgt)
     <1=
     Beh.of_program (@ModSemL.compile_itree CONFS itr_src).
 Proof.
   unfold Beh.of_program. ss.
-  remember false as o_src0 in SIM at 1.
-  remember false as o_tgt0 in SIM at 1. clear Heqo_src0 Heqo_tgt0.
   i. eapply adequacy_aux; et.
   instantiate (1:=o_tgt0). instantiate (1:=o_src0). clear x0 PR.
   generalize itr_tgt at 1 as md_tgt.
@@ -1392,7 +1391,7 @@ Proof.
     esplits; eauto. eapply step_tau; et.
   }
   { guclo sim_indC_spec. eapply sim_indC_demonic_tgt; ss. i.
-    eapply step_tau_iff in STEP. des. clarify.
+    eapply step_tau_iff in STEP. des. clarify. esplits; et.
   }
   { des. guclo sim_indC_spec. eapply sim_indC_demonic_src; ss.
     esplits; eauto. eapply step_trigger_choose; et.
@@ -1417,7 +1416,7 @@ Let ms_src: ModSemL.t := md_src.(ModL.enclose).
 Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 
 Section ADEQUACY.
-Hypothesis (SIM: simg eq false false (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src))) (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt)))).
+Hypothesis (SIM: simg (fun _ _ => eq) 0 0 (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src))) (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt)))).
 
 
 Theorem adequacy_global: Beh.of_program (@ModL.compile _ CONFT md_tgt) <1= Beh.of_program (@ModL.compile _ CONFS md_src).
