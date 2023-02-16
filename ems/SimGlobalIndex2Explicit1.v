@@ -432,7 +432,8 @@ Section GEN.
       f_src0
       g_src g_tgt g_src0
       (LTS: Ord.lt g_src0 g_src)
-      (SIM: exists x, gen_exp RR f_src0 f_tgt (g_src0) (ktr_src0 x) (g_tgt) (itr_tgt0))
+      x
+      (SIM: gen_exp RR f_src0 f_tgt (g_src0) (ktr_src0 x) (g_tgt) (itr_tgt0))
     :
     gen_exp RR f_src f_tgt (g_src) (trigger (Choose X) >>= ktr_src0) (g_tgt) (itr_tgt0)
   | gen_exp_chooseR
@@ -457,7 +458,8 @@ Section GEN.
       f_tgt0
       g_src g_tgt g_tgt0
       (LTT: Ord.lt g_tgt0 g_tgt)
-      (SIM: exists x, gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (ktr_tgt0 x))
+      x
+      (SIM: gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (ktr_tgt0 x))
     :
     gen_exp RR f_src f_tgt (g_src) (itr_src0) (g_tgt) (trigger (Take X) >>= ktr_tgt0)
 
@@ -471,6 +473,52 @@ Section GEN.
     :
     gen_exp RR f_src f_tgt (g_src) (itr_src) (g_tgt) (itr_tgt)
   .
+
+  Lemma gen_exp_leL
+        R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+        (itr_src: itree eventE R0)
+        (itr_tgt: itree eventE R1)
+        (f_src f_tgt: Ord.t)
+        gs0 gs1 gt
+        (LE: Ord.le gs0 gs1)
+        (GEN: gen_exp RR f_src f_tgt gs0 (itr_src) gt (itr_tgt))
+    :
+    gen_exp RR f_src f_tgt gs1 itr_src gt itr_tgt.
+  Proof.
+    generalize dependent gs1. induction GEN; i.
+    { econs 1. eauto. }
+    { econs 2. 3: eauto. all: auto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 3. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 4. 2: eauto. auto. }
+    { econs 5. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 6. 2: eauto. auto. }
+    { econs 7. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 8. 2: eauto. auto. }
+    { econs 9. eauto. all: auto. }
+  Qed.
+
+  Lemma gen_exp_leR
+        R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+        (itr_src: itree eventE R0)
+        (itr_tgt: itree eventE R1)
+        (f_src f_tgt: Ord.t)
+        gs gt0 gt1
+        (LE: Ord.le gt0 gt1)
+        (GEN: gen_exp RR f_src f_tgt gs (itr_src) gt0 (itr_tgt))
+    :
+    gen_exp RR f_src f_tgt gs itr_src gt1 itr_tgt.
+  Proof.
+    generalize dependent gt1. induction GEN; i.
+    { econs 1. eauto. }
+    { econs 2. 3: eauto. all: auto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 3. 2: eauto. auto. }
+    { econs 4. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 5. 2: eauto. auto. }
+    { econs 6. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 7. 2: eauto. auto. }
+    { econs 8. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 9. eauto. all: auto. }
+  Qed.
 
 End GEN.
 

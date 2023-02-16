@@ -11,7 +11,7 @@ Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 From Ordinal Require Import ClassicalOrdinal.
 
-Require Import SimGlobalExplicit SimGlobalIndex2Explicit.
+Require Import SimGlobalExplicit SimGlobalIndex2Explicit1.
 
 Set Implicit Arguments.
 
