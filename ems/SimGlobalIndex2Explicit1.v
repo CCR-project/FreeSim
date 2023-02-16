@@ -11,6 +11,8 @@ Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 From Ordinal Require Import ClassicalOrdinal.
 
+Require Import SimGlobalIndexTemp.
+
 Set Implicit Arguments.
 
 Section SIM.
@@ -354,6 +356,38 @@ Hint Unfold simg_aux.
 Hint Resolve simg_aux_mon: paco.
 Hint Constructors simg_aux_indC: core.
 Hint Resolve simg_aux_indC_mon: paco.
+Hint Resolve cpn7_wcompat: paco.
+
+Section PROOF.
+
+  Lemma simg_implies_simg_aux
+        R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+        (itr_src: itree eventE R0)
+        (itr_tgt: itree eventE R1)
+        (f_src f_tgt: Ord.t)
+        (SIM: simg RR f_src f_tgt (itr_src) (itr_tgt))
+    :
+    simg_aux RR f_src f_tgt itr_src itr_tgt.
+  Proof.
+    ginit. revert_until RR. gcofix CIH. i.
+    induction SIM using simg_ind.
+    { guclo simg_aux_indC_spec. }
+    { gstep. econs 2. i. specialize (SIM _ _ EQ).
+      instantiate (2:= Ord.S f_src0). instantiate (1:= Ord.S f_tgt0).
+      econs 9. gfinal. left. eauto. 1,2: apply Ord.S_lt.
+    }
+    { guclo simg_aux_indC_spec. }
+    { guclo simg_aux_indC_spec. }
+    { des. guclo simg_aux_indC_spec. }
+    { guclo simg_aux_indC_spec. econs 6. i. specialize (SIM x). des. eauto. }
+    { guclo simg_aux_indC_spec. econs 7. i. specialize (SIM x). des. eauto. }
+    { des. guclo simg_aux_indC_spec. }
+    { gstep. econs 9; eauto. gfinal. left; eauto. }
+  Qed.
+
+End PROOF.
+
+
 
 Section GEN.
 
@@ -441,3 +475,28 @@ Section GEN.
 End GEN.
 
 Global Hint Constructors gen_exp.
+
+Section PROOF.
+
+  Lemma simg_aux_gen_exp
+        R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+        (itr_src: itree eventE R0)
+        (itr_tgt: itree eventE R1)
+        (f_src f_tgt: Ord.t)
+        (SIM: simg_aux RR f_src f_tgt (itr_src) (itr_tgt))
+    :
+    exists gs gt, gen_exp RR f_src f_tgt gs itr_src gt itr_tgt.
+  Proof.
+    induction SIM using simg_aux_ind.
+    { exists Ord.O, Ord.O. econs 1. auto. }
+    { admit "join?". }
+    { des. do 2 eexists. econs 3. 2: eauto. eapply Ord.S_lt. }
+    { des. do 2 eexists. econs 4. 2: eauto. eapply Ord.S_lt. }
+    { des. do 2 eexists. econs 5. 2: eauto. eapply Ord.S_lt. }
+    { admit "join?". }
+    { admit "join?". }
+    { des. do 2 eexists. econs 8. 2: eauto. eapply Ord.S_lt. }
+    { exists Ord.O, Ord.O. econs 9; eauto. }
+  Abort.
+
+End PROOF.

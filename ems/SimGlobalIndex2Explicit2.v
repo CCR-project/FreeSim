@@ -17,7 +17,7 @@ Set Implicit Arguments.
 
 Section PROOF.
 
-  Lemma gen_exp2simg_exp
+  Lemma gen_exp_implies_simg_exp
         R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
         (itr_src: itree eventE R0)
         (itr_tgt: itree eventE R1)
