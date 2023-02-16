@@ -358,13 +358,13 @@ Hint Resolve simg_aux_indC_mon: paco.
 Section GEN.
 
   Inductive gen_exp
-            {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (Ord.t * (itree eventE R0)) -> (Ord.t * (itree eventE R1)) -> Prop :=
+            {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (Ord.t) -> (itree eventE R0) -> (Ord.t) -> (itree eventE R1) -> Prop :=
   | gen_exp_ret
       r_src r_tgt
       g_src g_tgt
       (GEN: RR f_src f_tgt r_src r_tgt)
     :
-    gen_exp RR f_src f_tgt (g_src, Ret r_src) (g_tgt, Ret r_tgt)
+    gen_exp RR f_src f_tgt (g_src) (Ret r_src) (g_tgt) (Ret r_tgt)
   | gen_exp_syscall
       ktr_src0 ktr_tgt0 fn varg rvs
       f_src0 f_tgt0
@@ -372,60 +372,60 @@ Section GEN.
       (LTS: Ord.lt g_src0 g_src)
       (LTT: Ord.lt g_tgt0 g_tgt)
       (GEN: forall x_src x_tgt (EQ: x_src = x_tgt),
-          gen_exp RR f_src0 f_tgt0 (g_src0, ktr_src0 x_src) (g_tgt0, ktr_tgt0 x_tgt))
+          gen_exp RR f_src0 f_tgt0 (g_src0) (ktr_src0 x_src) (g_tgt0) (ktr_tgt0 x_tgt))
     :
-    gen_exp RR f_src f_tgt (g_src, trigger (Syscall fn varg rvs) >>= ktr_src0) (g_tgt, trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (trigger (Syscall fn varg rvs) >>= ktr_src0) (g_tgt) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
 
   | gen_exp_tauL
       itr_src0 itr_tgt0
       f_src0
       g_src g_tgt g_src0
       (LTS: Ord.lt g_src0 g_src)
-      (SIM: gen_exp RR f_src0 f_tgt (g_src0, itr_src0) (g_tgt, itr_tgt0))
+      (SIM: gen_exp RR f_src0 f_tgt (g_src0) (itr_src0) (g_tgt) (itr_tgt0))
     :
-    gen_exp RR f_src f_tgt (g_src, tau;; itr_src0) (g_tgt, itr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (tau;; itr_src0) (g_tgt) (itr_tgt0)
   | gen_exp_tauR
       itr_src0 itr_tgt0
       f_tgt0
       g_src g_tgt g_tgt0
       (LTT: Ord.lt g_tgt0 g_tgt)
-      (SIM: gen_exp RR f_src f_tgt0 (g_src, itr_src0) (g_tgt0, itr_tgt0))
+      (SIM: gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (itr_tgt0))
     :
-    gen_exp RR f_src f_tgt (g_src, itr_src0) (g_tgt0, tau;; itr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (itr_src0) (g_tgt) (tau;; itr_tgt0)
 
   | gen_exp_chooseL
       X ktr_src0 itr_tgt0
       f_src0
       g_src g_tgt g_src0
       (LTS: Ord.lt g_src0 g_src)
-      (SIM: exists x, gen_exp RR f_src0 f_tgt (g_src0, ktr_src0 x) (g_tgt, itr_tgt0))
+      (SIM: exists x, gen_exp RR f_src0 f_tgt (g_src0) (ktr_src0 x) (g_tgt) (itr_tgt0))
     :
-    gen_exp RR f_src f_tgt (g_src, trigger (Choose X) >>= ktr_src0) (g_tgt, itr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (trigger (Choose X) >>= ktr_src0) (g_tgt) (itr_tgt0)
   | gen_exp_chooseR
       X itr_src0 ktr_tgt0
       f_tgt0
       g_src g_tgt g_tgt0
       (LTT: Ord.lt g_tgt0 g_tgt)
-      (SIM: forall x, gen_exp RR f_src f_tgt0 (g_src, itr_src0) (g_tgt0, ktr_tgt0 x))
+      (SIM: forall x, gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (ktr_tgt0 x))
     :
-    gen_exp RR f_src f_tgt (g_src, itr_src0) (g_tgt, trigger (Choose X) >>= ktr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (itr_src0) (g_tgt) (trigger (Choose X) >>= ktr_tgt0)
 
   | gen_exp_takeL
       X ktr_src0 itr_tgt0
       f_src0
       g_src g_tgt g_src0
       (LTS: Ord.lt g_src0 g_src)
-      (SIM: forall x, gen_exp RR f_src0 f_tgt (g_src0, ktr_src0 x) (g_tgt, itr_tgt0))
+      (SIM: forall x, gen_exp RR f_src0 f_tgt (g_src0) (ktr_src0 x) (g_tgt) (itr_tgt0))
     :
-    gen_exp RR f_src f_tgt (g_src, trigger (Take X) >>= ktr_src0) (g_tgt, itr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (trigger (Take X) >>= ktr_src0) (g_tgt) (itr_tgt0)
   | gen_exp_takeR
       X itr_src0 ktr_tgt0
       f_tgt0
       g_src g_tgt g_tgt0
       (LTT: Ord.lt g_tgt0 g_tgt)
-      (SIM: exists x, gen_exp RR f_src f_tgt0 (g_src, itr_src0) (g_tgt0, ktr_tgt0 x))
+      (SIM: exists x, gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (ktr_tgt0 x))
     :
-    gen_exp RR f_src f_tgt (g_src, itr_src0) (g_tgt, trigger (Take X) >>= ktr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (itr_src0) (g_tgt) (trigger (Take X) >>= ktr_tgt0)
 
   | gen_exp_progress
       itr_src itr_tgt
@@ -435,7 +435,7 @@ Section GEN.
       (SRC: (f_src0 < f_src)%ord)
       (TGT: (f_tgt0 < f_tgt)%ord)
     :
-    gen_exp RR f_src f_tgt (g_src, itr_src) (g_tgt, itr_tgt)
+    gen_exp RR f_src f_tgt (g_src) (itr_src) (g_tgt) (itr_tgt)
   .
 
 End GEN.
