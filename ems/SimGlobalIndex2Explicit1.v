@@ -11,6 +11,7 @@ Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 From Ordinal Require Import ClassicalOrdinal.
 
+Require Import WFLib.
 Require Import SimGlobalIndexTemp.
 
 Set Implicit Arguments.
@@ -391,8 +392,10 @@ End PROOF.
 
 Section GEN.
 
+  Variable wf: WF.
+
   Inductive gen_exp
-            {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (Ord.t) -> (itree eventE R0) -> (Ord.t) -> (itree eventE R1) -> Prop :=
+            {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (wf.(T)) -> (itree eventE R0) -> (wf.(T)) -> (itree eventE R1) -> Prop :=
   | gen_exp_ret
       r_src r_tgt
       g_src g_tgt
@@ -403,8 +406,8 @@ Section GEN.
       ktr_src0 ktr_tgt0 fn varg rvs
       f_src0 f_tgt0
       g_src g_tgt g_src0 g_tgt0
-      (LTS: Ord.lt g_src0 g_src)
-      (LTT: Ord.lt g_tgt0 g_tgt)
+      (LTS: wf.(lt) g_src0 g_src)
+      (LTT: wf.(lt) g_tgt0 g_tgt)
       (GEN: forall x_src x_tgt (EQ: x_src = x_tgt),
           gen_exp RR f_src0 f_tgt0 (g_src0) (ktr_src0 x_src) (g_tgt0) (ktr_tgt0 x_tgt))
     :
@@ -414,7 +417,7 @@ Section GEN.
       itr_src0 itr_tgt0
       f_src0
       g_src g_tgt g_src0
-      (LTS: Ord.lt g_src0 g_src)
+      (LTS: wf.(lt) g_src0 g_src)
       (SIM: gen_exp RR f_src0 f_tgt (g_src0) (itr_src0) (g_tgt) (itr_tgt0))
     :
     gen_exp RR f_src f_tgt (g_src) (tau;; itr_src0) (g_tgt) (itr_tgt0)
@@ -422,7 +425,7 @@ Section GEN.
       itr_src0 itr_tgt0
       f_tgt0
       g_src g_tgt g_tgt0
-      (LTT: Ord.lt g_tgt0 g_tgt)
+      (LTT: wf.(lt) g_tgt0 g_tgt)
       (SIM: gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (itr_tgt0))
     :
     gen_exp RR f_src f_tgt (g_src) (itr_src0) (g_tgt) (tau;; itr_tgt0)
@@ -431,7 +434,7 @@ Section GEN.
       X ktr_src0 itr_tgt0
       f_src0
       g_src g_tgt g_src0
-      (LTS: Ord.lt g_src0 g_src)
+      (LTS: wf.(lt) g_src0 g_src)
       x
       (SIM: gen_exp RR f_src0 f_tgt (g_src0) (ktr_src0 x) (g_tgt) (itr_tgt0))
     :
@@ -440,7 +443,7 @@ Section GEN.
       X itr_src0 ktr_tgt0
       f_tgt0
       g_src g_tgt g_tgt0
-      (LTT: Ord.lt g_tgt0 g_tgt)
+      (LTT: wf.(lt) g_tgt0 g_tgt)
       (SIM: forall x, gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (ktr_tgt0 x))
     :
     gen_exp RR f_src f_tgt (g_src) (itr_src0) (g_tgt) (trigger (Choose X) >>= ktr_tgt0)
@@ -449,7 +452,7 @@ Section GEN.
       X ktr_src0 itr_tgt0
       f_src0
       g_src g_tgt g_src0
-      (LTS: Ord.lt g_src0 g_src)
+      (LTS: wf.(lt) g_src0 g_src)
       (SIM: forall x, gen_exp RR f_src0 f_tgt (g_src0) (ktr_src0 x) (g_tgt) (itr_tgt0))
     :
     gen_exp RR f_src f_tgt (g_src) (trigger (Take X) >>= ktr_src0) (g_tgt) (itr_tgt0)
@@ -457,7 +460,7 @@ Section GEN.
       X itr_src0 ktr_tgt0
       f_tgt0
       g_src g_tgt g_tgt0
-      (LTT: Ord.lt g_tgt0 g_tgt)
+      (LTT: wf.(lt) g_tgt0 g_tgt)
       x
       (SIM: gen_exp RR f_src f_tgt0 (g_src) (itr_src0) (g_tgt0) (ktr_tgt0 x))
     :
@@ -480,19 +483,33 @@ Section GEN.
         (itr_tgt: itree eventE R1)
         (f_src f_tgt: Ord.t)
         gs0 gs1 gt
-        (LE: Ord.le gs0 gs1)
+        (LE: wf.(le) gs0 gs1)
         (GEN: gen_exp RR f_src f_tgt gs0 (itr_src) gt (itr_tgt))
     :
     gen_exp RR f_src f_tgt gs1 itr_src gt itr_tgt.
   Proof.
-    generalize dependent gs1. induction GEN; i.
+    destruct LE.
+    { clarify. }
+    rename H into LT. generalize dependent gs1. induction GEN; i.
     { econs 1. eauto. }
-    { econs 2. 3: eauto. all: auto. eapply Ord.lt_le_lt. all: eauto. }
-    { econs 3. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 2.
+      3:{ i. specialize (H _ _ EQ _ LTS). eauto. }
+      all: auto.
+    }
+    { econs 3.
+      2:{ specialize (IHGEN _ LTS). eauto. }
+      auto.
+    }
     { econs 4. 2: eauto. auto. }
-    { econs 5. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 5.
+      2:{ specialize (IHGEN _ LTS). eauto. }
+      auto.
+    }
     { econs 6. 2: eauto. auto. }
-    { econs 7. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 7.
+      2:{ i. specialize (H x _ LTS). eauto. }
+      auto.
+    }
     { econs 8. 2: eauto. auto. }
     { econs 9. eauto. all: auto. }
   Qed.
@@ -503,20 +520,34 @@ Section GEN.
         (itr_tgt: itree eventE R1)
         (f_src f_tgt: Ord.t)
         gs gt0 gt1
-        (LE: Ord.le gt0 gt1)
+        (LE: wf.(le) gt0 gt1)
         (GEN: gen_exp RR f_src f_tgt gs (itr_src) gt0 (itr_tgt))
     :
     gen_exp RR f_src f_tgt gs itr_src gt1 itr_tgt.
   Proof.
-    generalize dependent gt1. induction GEN; i.
+    destruct LE.
+    { clarify. }
+    rename H into LT. generalize dependent gt1. induction GEN; i.
     { econs 1. eauto. }
-    { econs 2. 3: eauto. all: auto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 2.
+      3:{ i. specialize (H _ _ EQ _ LTT). eauto. }
+      all: auto.
+    }
     { econs 3. 2: eauto. auto. }
-    { econs 4. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 4.
+      2:{ specialize (IHGEN _ LTT). eauto. }
+      auto.
+    }
     { econs 5. 2: eauto. auto. }
-    { econs 6. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 6.
+      2:{ i. specialize (H x _ LTT). eauto. }
+      auto.
+    }
     { econs 7. 2: eauto. auto. }
-    { econs 8. 2: eauto. eapply Ord.lt_le_lt. all: eauto. }
+    { econs 8.
+      2:{ specialize (IHGEN _ LTT). eauto. }
+      auto.
+    }
     { econs 9. eauto. all: auto. }
   Qed.
 
@@ -533,18 +564,116 @@ Section PROOF.
         (f_src f_tgt: Ord.t)
         (SIM: simg_aux RR f_src f_tgt (itr_src) (itr_tgt))
     :
-    exists gs gt, gen_exp RR f_src f_tgt gs itr_src gt itr_tgt.
+    exists wf gs gt, gen_exp wf RR f_src f_tgt gs itr_src gt itr_tgt.
   Proof.
+    set (A:= ((itree eventE R0) * (itree eventE R1))%type). move A before RR.
+    set (def:= (@ITree.spin eventE R0, @ITree.spin eventE R1)). move def before A.
+    exists (@ord_tree_WF A).
     induction SIM using simg_aux_ind.
-    { exists Ord.O, Ord.O. econs 1. auto. }
-    { admit "join?". }
-    { des. do 2 eexists. econs 3. 2: eauto. eapply Ord.S_lt. }
-    { des. do 2 eexists. econs 4. 2: eauto. eapply Ord.S_lt. }
-    { des. do 2 eexists. econs 5. 2: eauto. eapply Ord.S_lt. }
-    { admit "join?". }
-    { admit "join?". }
-    { des. do 2 eexists. econs 8. 2: eauto. eapply Ord.S_lt. }
-    { exists Ord.O, Ord.O. econs 9; eauto. }
-  Abort.
+    { exists (ord_tree_base A), (ord_tree_base A). econs 1. auto. }
+    { hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gs gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 gs i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           exists gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 o i_s gt i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN1. des. rename o1 into gsT.
+      set (Succ1 := (fun _: A => gsT)). exists (ord_tree_cons Succ1).
+      hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 gsT i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 gsT i_s o i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN2. des. rename o1 into gtT.
+      set (Succ2 := (fun _: A => gtT)). exists (ord_tree_cons Succ2).
+      eapply gen_exp_syscall.
+      { instantiate (1:= (Succ1 def)). ss. }
+      { instantiate (1:= (Succ2 def)). ss. }
+      instantiate (1:=f_tgt0). instantiate (1:=f_src0). i. subst Succ1 Succ2. ss.
+      set (itrp := (ktr_src0 x_src, ktr_tgt0 x_tgt)).
+      specialize (JOIN2 itrp). specialize (JOIN1 itrp).
+      subst itrp. ss. specialize (SIM _ _ EQ). des.
+      hexploit JOIN1; clear JOIN1. eauto. i. des.
+      hexploit JOIN2; clear JOIN2.
+      { exists gt0. eapply gen_exp_leL. 2: eauto. right. auto. }
+      i. des. eapply gen_exp_leR. 2: eauto. right. auto.
+    }
+    { des. set (Succ := (fun _: A => gs)). exists (ord_tree_cons Succ), gt.
+      econs 3. 2: eauto. replace gs with (Succ def); ss.
+    }
+    { des. set (Succ := (fun _: A => gt)). exists gs, (ord_tree_cons Succ).
+      econs 4. 2: eauto. replace gt with (Succ def); ss.
+    }
+    { des. set (Succ := (fun _: A => gs)). exists (ord_tree_cons Succ), gt.
+      econs 5. 2: eauto. replace gs with (Succ def); ss.
+    }
+    { hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gs gt, gen_exp (@ord_tree_WF A) RR f_src f_tgt0 gs i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           exists gt, gen_exp (@ord_tree_WF A) RR f_src f_tgt0 o i_s gt i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN1. des. rename o1 into gsT. exists gsT.
+      hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gt, gen_exp (@ord_tree_WF A) RR f_src f_tgt0 gsT i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           gen_exp (@ord_tree_WF A) RR f_src f_tgt0 gsT i_s o i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN2. des. rename o1 into gtT.
+      set (Succ := (fun _: A => gtT)). exists (ord_tree_cons Succ).
+      eapply gen_exp_chooseR.
+      { instantiate (1:= (Succ def)). ss. }
+      instantiate (1:=f_tgt0). i. subst Succ. ss.
+      set (itrp := (itr_src0, ktr_tgt0 x)). specialize (JOIN2 itrp). specialize (JOIN1 itrp).
+      subst itrp. ss. specialize (SIM x). des.
+      hexploit JOIN1; clear JOIN1. eauto. i. des.
+      hexploit JOIN2; clear JOIN2.
+      { exists gt0. eapply gen_exp_leL. 2: eauto. right. auto. }
+      i. des. eapply gen_exp_leR. 2: eauto. right. auto.
+    }
+    { hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gs gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt gs i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           exists gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt o i_s gt i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN1. des. rename o1 into gsT.
+      set (Succ := (fun _: A => gsT)). exists (ord_tree_cons Succ).
+      hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt gsT i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           gen_exp (@ord_tree_WF A) RR f_src0 f_tgt gsT i_s o i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN2. des. rename o1 into gtT. exists gtT.
+      eapply gen_exp_takeL.
+      { instantiate (1:= (Succ def)). ss. }
+      instantiate (1:=f_src0). i. subst Succ. ss.
+      set (itrp := (ktr_src0 x, itr_tgt0)). specialize (JOIN2 itrp). specialize (JOIN1 itrp).
+      subst itrp. ss. specialize (SIM x). des.
+      hexploit JOIN1; clear JOIN1. eauto. i. des.
+      hexploit JOIN2; clear JOIN2.
+      { exists gt0. eapply gen_exp_leL. 2: eauto. right. auto. }
+      i. des. eapply gen_exp_leR. 2: eauto. right. auto.
+    }
+    { des. set (Succ := (fun _: A => gt)). exists gs, (ord_tree_cons Succ).
+      econs 8. 2: eauto. replace gt with (Succ def); ss.
+    }
+    { exists (ord_tree_base A), (ord_tree_base A). econs 9; eauto. }
+  Qed.
 
 End PROOF.
