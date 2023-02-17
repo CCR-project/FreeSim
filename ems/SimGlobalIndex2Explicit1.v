@@ -564,11 +564,12 @@ Section PROOF.
         (f_src f_tgt: Ord.t)
         (SIM: simg_aux RR f_src f_tgt (itr_src) (itr_tgt))
     :
-    exists wf gs gt, gen_exp wf RR f_src f_tgt gs itr_src gt itr_tgt.
+    exists gs gt, gen_exp (@ord_tree_WF ((itree eventE R0) * (itree eventE R1)))
+                     RR f_src f_tgt gs itr_src gt itr_tgt.
   Proof.
     set (A:= ((itree eventE R0) * (itree eventE R1))%type). move A before RR.
     set (def:= (@ITree.spin eventE R0, @ITree.spin eventE R1)). move def before A.
-    exists (@ord_tree_WF A).
+    (* exists (@ord_tree_WF A). *)
     induction SIM using simg_aux_ind.
     { exists (ord_tree_base A), (ord_tree_base A). econs 1. auto. }
     { hexploit ord_tree_join.
