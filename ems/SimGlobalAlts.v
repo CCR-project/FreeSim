@@ -82,6 +82,8 @@ Section SRCSTEPS.
     ITR -> Prop := (st_star (fun ktr => src_step r ktr))
   .
 
+  Definition st_plus (r: ITR -> Prop): ITR -> Prop := src_plus (fun args ktr => (args = None) /\ (r ktr)).
+
   (* properties *)
   Lemma st_step_mon
         (r0 r1: ITR -> Prop) itr
@@ -135,6 +137,102 @@ Section SRCSTEPS.
   Proof.
     i. eapply st_star_mon. 2: eauto. i; ss. eapply src_step_mon. 2: eauto. eauto.
   Qed.
+
+
+  (* Lemma st_step_comp *)
+  (*       (r0: ITR -> Prop) itr *)
+  (*       (STEP0: st_step r0 itr) *)
+  (*       ktr (CONT0: r0 ktr) *)
+  (*       (r1: ITR -> Prop) *)
+  (*       (STEP1: st_step r1 ktr) *)
+  (*       ctr (CONT1: r1 ctr) *)
+  (*   : *)
+  (*   exists r2, (st_step r2 itr) /\ (r2 ctr). *)
+  (* Proof. *)
+  (*   inv STEP0. *)
+  (*   - inv STEP1. *)
+  (*     + exists  econs 1. *)
+
+  Lemma st_star_st_step_comp
+        (r0: ITR -> Prop) itr
+        (STAR: st_star r0 itr)
+        ktr (CONT0: r0 ktr)
+        (r1: ITR -> Prop)
+        (STEP: st_step r1 ktr)
+        ctr (CONT1: r1 ctr)
+    :
+    exists r2, (st_star r2 itr) /\ (r2 ctr).
+  Proof.
+    revert_until STAR. induction STAR using st_star_ind2. i.
+    { 
+    inv STEP0.
+    - inv STEP1.
+      + exists  econs 1.
+
+
+  Lemma st_star_st_step_comp
+        (r0: ITR -> Prop) itr
+        (STEP0: st_star r0 itr)
+        (r1: ITR -> Prop) ktr
+        (CONT: r0 ktr)
+        (STEP1: st_step r1 ktr)
+    :
+    st_star (fun ktr => (st_step r1 ktr)) itr.
+  Proof.
+    inv STEP0.
+    - inv STEP1.
+      + econs 1.
+
+    econs 1.
+    unfold st_plus, src_plus in *. 
+
+  Lemma st_plus_trans
+        (r0 r1: ITR -> Prop) itr
+        (PLUS: st_plus r0 itr)
+        ktr
+        (CONT: r0 ktr)
+        (STEP: st_plus r1 ktr)
+    :
+    st_plus r1 itr.
+  Proof.
+    unfold st_plus, src_plus in *. 
+
+
+
+    Variant st_step (r: ITR -> Prop): ITR -> Prop :=
+    | st_step_tau
+        ktr
+        (REL: r ktr)
+      :
+      st_step r (tau;; ktr)
+    | st_step_choose
+        X ktr
+        (REL: exists x, r (ktr x))
+      :
+      st_step r (trigger (Choose X) >>= ktr)
+    | st_step_take
+        X ktr
+        (REL: forall x, r (ktr x))
+      :
+      st_step r (trigger (Take X) >>= ktr)
+  .
+
+  Inductive st_star (r: ITR -> Prop): ITR -> Prop :=
+  | st_star_base itr (REL: r itr): st_star r itr
+  | st_star_step itr (REL: st_step (fun ktr => st_star r ktr) itr): st_star r itr
+  .
+
+  Definition src_step (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop):
+    ITR -> Prop :=
+    fun itr =>
+      (<<TAU: st_step (r None) itr>>) \/ (<<OBS: exists args, obs_step args (r (Some args)) itr>>)
+  .
+
+  Definition src_plus (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop):
+    ITR -> Prop := (st_star (fun ktr => src_step r ktr))
+  .
+
+  Definition st_plus (r: ITR -> Prop): ITR -> Prop := src_plus (fun args ktr => (args = None) /\ (r ktr)).
 
 End SRCSTEPS.
 
