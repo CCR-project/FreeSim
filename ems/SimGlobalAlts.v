@@ -13,7 +13,7 @@ From Ordinal Require Import ClassicalOrdinal.
 
 Set Implicit Arguments.
 
-Section STEPS.
+Section SRCSTEPS.
 
   Variable R: Type.
   Let ITR := (itree eventE R).
@@ -37,6 +37,11 @@ Section STEPS.
       st_step r (trigger (Take X) >>= ktr)
   .
 
+  Inductive st_star (r: ITR -> Prop): ITR -> Prop :=
+  | base itr (REL: r itr): st_star r itr
+  | step itr (REL: st_step (fun ktr => st_star r ktr) itr): st_star r itr
+  .
+
   Variant so_step (args: string * Any.t * (Any.t -> Prop) * Any.t) (r: ITR -> Prop): ITR -> Prop :=
     | so_step_syscall
         fn varg rvs ktr v
@@ -46,16 +51,21 @@ Section STEPS.
       so_step args r (trigger (Syscall fn varg rvs) >>= ktr)
   .
 
-  Definition src_step (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop): ITR -> Prop :=
-    fun itr => (<<TAU: st_step (r None) itr>>) \/ (<<OBS: exists args, so_step args (r (Some args)) itr>>)
+  Definition src_step (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop):
+    ITR -> Prop :=
+    fun itr =>
+      (<<TAU: st_step (r None) itr>>) \/ (<<OBS: exists args, so_step args (r (Some args)) itr>>)
   .
 
-  Inductive st_star (r: ITR -> Prop): ITR -> Prop :=
-  | base itr (REL: r itr): st_star r itr
-  | step itr (REL: st_step (fun ktr => st_star r ktr) itr): st_star r itr
+  Definition src_plus (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop):
+    ITR -> Prop :=
+    fun itr => (st_star (fun ktr => src_step r ktr) itr)
   .
 
-End STEPS.
+  Variant is_return: ITR -> Prop :=
+    | is_return_intro retv: is_return (Ret retv).
+
+End SRCSTEPS.
 
 
 
