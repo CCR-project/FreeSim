@@ -379,16 +379,18 @@ Section EXP_SIM.
     fun itr_src itr_tgt =>
       (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
       \/
+        (exists arg, forall rt rs (EQ: rt = rs), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>))
+      \/
         (
-          (<<TGT: (tgt_step (fun targ ktr_tgt =>
-                               (src_step (fun sarg ktr_src => (<<EQ: targ = sarg>>) -> exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src)
-                               \/ ((targ = None) /\ exists exp0, (simg_alt_exp _ _ RR exp0 itr_src ktr_tgt) /\ (wfo.(lt) exp0 exp))
-                            ) itr_tgt)>>)
+          (<<TGT: (tt_step (fun ktr_tgt =>
+                              (st_step (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src)
+                              \/ (exists exp0, (simg_alt_exp _ _ RR exp0 itr_src ktr_tgt) /\ (wfo.(lt) exp0 exp))
+                           ) itr_tgt)>>)
           \/
-            (<<SRC: (src_step (fun sarg ktr_src =>
-                                 (tgt_step (fun targ ktr_tgt => (<<EQ: sarg = targ>>) -> exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_tgt)
-                                 \/ ((sarg = None) /\ exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src itr_tgt) /\ (wfo.(lt) exp0 exp))
-                              ) itr_src)>>)
+            (<<SRC: (st_step (fun ktr_src =>
+                                (tt_step (fun ktr_tgt => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_tgt)
+                                \/ (exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src itr_tgt) /\ (wfo.(lt) exp0 exp))
+                             ) itr_src)>>)
         )
   .
 
@@ -398,14 +400,17 @@ Section EXP_SIM.
   Proof.
     ii. inv IN.
     { left. eauto. }
-    right. des; [left | right].
-    { eapply tgt_step_mon. 2: eauto. i; ss. des; [left | right].
-      - eapply src_step_mon. 2: eauto. i; ss. specialize (H0 H1). des; eauto.
-      - split; eauto.
+    right. des; [left | right; left | right; right].
+    { exists arg. i. specialize (H _ _ EQ). eapply obs_step_mon; [|eauto]. i; ss.
+      eapply obs_step_mon; [|eauto]. i; ss. des; eauto.
+    }    
+    { eapply tt_step_mon. 2: eauto. i; ss. des; [left | right].
+      - eapply st_step_mon. 2: eauto. i; ss. des; eauto.
+      - esplits; eauto.
     }
-    { eapply src_step_mon. 2: eauto. i; ss. des; [left | right].
-      - eapply tgt_step_mon. 2: eauto. i; ss. specialize (H0 H1). des; eauto.
-      - split; eauto.
+    { eapply st_step_mon. 2: eauto. i; ss. des; [left | right].
+      - eapply tt_step_mon. 2: eauto. i; ss. des; eauto.
+      - esplits; eauto.
     }
   Qed.
 
@@ -416,6 +421,56 @@ End EXP_SIM.
 Hint Unfold simg_alt_exp.
 Hint Resolve simg_alt_exp_mon: paco.
 Hint Resolve cpn6_wcompat: paco.
+
+
+(** obs steps asynchronous **)
+(* Section EXP_SIM. *)
+
+(*   Variable wfo: WF. *)
+
+(*   Definition _simg_alt_exp *)
+(*              (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop) *)
+(*              {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop := *)
+(*     fun itr_src itr_tgt => *)
+(*       (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>)) *)
+(*       \/ *)
+(*         ( *)
+(*           (<<TGT: (tgt_step (fun targ ktr_tgt => *)
+(*                                (src_step (fun sarg ktr_src => (<<EQ: targ = sarg>>) -> exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) *)
+(*                                \/ ((targ = None) /\ exists exp0, (simg_alt_exp _ _ RR exp0 itr_src ktr_tgt) /\ (wfo.(lt) exp0 exp)) *)
+(*                             ) itr_tgt)>>) *)
+(*           \/ *)
+(*             (<<SRC: (src_step (fun sarg ktr_src => *)
+(*                                  (tgt_step (fun targ ktr_tgt => (<<EQ: sarg = targ>>) -> exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_tgt) *)
+(*                                  \/ ((sarg = None) /\ exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src itr_tgt) /\ (wfo.(lt) exp0 exp)) *)
+(*                               ) itr_src)>>) *)
+(*         ) *)
+(*   . *)
+
+(*   Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco6 _simg_alt_exp bot6. *)
+
+(*   Lemma simg_alt_exp_mon: monotone6 _simg_alt_exp. *)
+(*   Proof. *)
+(*     ii. inv IN. *)
+(*     { left. eauto. } *)
+(*     right. des; [left | right]. *)
+(*     { eapply tgt_step_mon. 2: eauto. i; ss. des; [left | right]. *)
+(*       - eapply src_step_mon. 2: eauto. i; ss. specialize (H0 H1). des; eauto. *)
+(*       - split; eauto. *)
+(*     } *)
+(*     { eapply src_step_mon. 2: eauto. i; ss. des; [left | right]. *)
+(*       - eapply tgt_step_mon. 2: eauto. i; ss. specialize (H0 H1). des; eauto. *)
+(*       - split; eauto. *)
+(*     } *)
+(*   Qed. *)
+
+(*   Hint Resolve simg_alt_exp_mon: paco. *)
+(*   Hint Resolve cpn6_wcompat: paco. *)
+
+(* End EXP_SIM. *)
+(* Hint Unfold simg_alt_exp. *)
+(* Hint Resolve simg_alt_exp_mon: paco. *)
+(* Hint Resolve cpn6_wcompat: paco. *)
 
 
 (** star and plus steps **)
