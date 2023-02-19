@@ -129,3 +129,40 @@ Section PROOF.
   Qed.
 
 End PROOF.
+
+Section PROOF.
+
+  Theorem simg_alt_exp_implies_simg_alt_imp
+          R0 R1 (RR: R0 -> R1 -> Prop)
+          (wfo: WF)
+          (itr_src: itree eventE R0)
+          (itr_tgt: itree eventE R1)
+          (exp: wfo.(T))
+          (SIM: simg_alt_exp wfo RR exp (itr_src) (itr_tgt))
+    :
+    simg_alt_imp RR itr_src itr_tgt.
+  Proof.
+    revert_until wfo. pcofix CIH. i.
+    (* ginit. revert_until wfo. gcofix CIH. i. *)
+    move exp before CIH. revert_until exp. pattern exp. revert exp.
+    apply (well_founded_induction wfo.(wf)). intros exp IHe. i.
+    punfold SIM. inv SIM.
+    { pfold. econs. left. eauto. }
+    des.
+    { pfold. econs. right; left. esplits; eauto. i. specialize (H0 _ _ EQ).
+      eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
+      des. destruct H3; clarify. right. eapply CIH; eauto.
+    }
+    { pfold. econs. do 2 right; left.
+      eapply tt_step_mon; [|eauto]. i; ss. des; [left | right].
+      - eapply st_step_mon; [|eauto]. i; ss. des. right. destruct H0; clarify. eauto.
+      - destruct H; clarify. specialize (IHe _ H0 _ _ H). punfold IHe.
+    }
+    { pfold. econs. do 2 right; right.
+      eapply st_step_mon; [|eauto]. i; ss. des; [left | right].
+      - eapply tt_step_mon; [|eauto]. i; ss. des. right. destruct H0; clarify. eauto.
+      - destruct H; clarify. specialize (IHe _ H0 _ _ H). punfold IHe.
+    }
+  Qed.
+
+End PROOF.
