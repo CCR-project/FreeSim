@@ -50,7 +50,8 @@ Section PROOF.
     { right. exists None. split. gstep. left. esplits; eauto. all: econs; eauto. }
     { right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
-      gstep. right. left. exists (fn, varg, rvs). i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
+      gstep. right. left. exists (fn, varg, rvs). splits; [econs; eauto| econs; eauto |].
+      i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt1, f_src1)). gfinal. left. eapply CIH; eauto.
     }
@@ -90,8 +91,8 @@ Section PROOF.
     ginit. revert_until wfo. gcofix CIH. i.
     punfold SIM. inv SIM.
     { gstep. left. esplits; eauto. all: econs; eauto. }
-    { gstep. right. left.
-      exists (fn, varg, rvs). i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
+    { gstep. right. left. exists (fn, varg, rvs). splits; [econs; eauto | econs; eauto |].
+      i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt0, f_src0)). gfinal. left. eapply CIH; eauto.
     }

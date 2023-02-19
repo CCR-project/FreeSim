@@ -29,9 +29,18 @@ Section COMMON.
       obs_step args r (trigger (Syscall fn varg rvs) >>= ktr)
   .
 
+  Variant is_obs (arg: string * Any.t * (Any.t -> Prop)): ITR -> Prop :=
+    | is_obs_intro
+        fn varg rvs ktr
+        (ARG: arg = (fn, varg, rvs))
+      :
+      is_obs arg (trigger (Syscall fn varg rvs) >>= ktr).
+
   Variant is_ret (rv: R): ITR -> Prop :=
     | is_ret_intro: is_ret rv (Ret rv).
 
+
+  (* roperties *)
   Lemma obs_step_mon
         args (r0 r1: ITR -> Prop) itr
         (MON: forall itr, (r0 itr) -> (r1 itr))
@@ -379,7 +388,9 @@ Section EXP_SIM.
     fun itr_src itr_tgt =>
       (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
       \/
-        (exists arg, forall rt rs (EQ: rt = rs), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>))
+        (exists arg,
+            ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
+              (forall rt rs (EQ: rt = rs), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (
           (<<TGT: (tt_step (fun ktr_tgt =>
@@ -401,7 +412,7 @@ Section EXP_SIM.
     ii. inv IN.
     { left. eauto. }
     right. des; [left | right; left | right; right].
-    { exists arg. i. specialize (H _ _ EQ). eapply obs_step_mon; [|eauto]. i; ss.
+    { exists arg. splits; auto. i. specialize (H0 _ _ EQ). eapply obs_step_mon; [|eauto]. i; ss.
       eapply obs_step_mon; [|eauto]. i; ss. des; eauto.
     }    
     { eapply tt_step_mon. 2: eauto. i; ss. des; [left | right].
