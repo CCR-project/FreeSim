@@ -480,3 +480,4 @@ Hint Constructors flagC: core.
 Hint Resolve flagC_mon: paco.
 Hint Constructors simg_indC: core.
 Hint Resolve simg_indC_mon: paco.
+Hint Resolve cpn7_wcompat: paco.
