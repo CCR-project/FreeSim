@@ -83,7 +83,11 @@ Section SRCSTEPS.
     ITR -> Prop := (st_star (fun ktr => src_step r ktr))
   .
 
-  Definition st_plus (r: ITR -> Prop): ITR -> Prop := src_plus (fun args ktr => (args = None) /\ (r ktr)).
+  (* Definition st_plus (r: ITR -> Prop): ITR -> Prop := src_plus (fun args ktr => (args = None) /\ (r ktr)). *)
+
+  Definition src_star (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop):
+    ITR -> Prop :=
+    (st_star (fun ktr => (r None ktr) \/ (exists arg, forall v, obs_step (arg, v) (r (Some (arg, v))) ktr))).
 
   (* properties *)
   Lemma st_step_mon
@@ -139,6 +143,16 @@ Section SRCSTEPS.
     i. eapply st_star_mon. 2: eauto. i; ss. eapply src_step_mon. 2: eauto. eauto.
   Qed.
 
+  Lemma src_star_mon
+        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop) itr
+        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
+    :
+    (src_star r0 itr) -> (src_star r1 itr).
+  Proof.
+    i. eapply st_star_mon. 2: eauto. i; ss. des; eauto. right.
+    eexists. i. eapply obs_step_mon. 2: eauto. eauto.
+  Qed.
+
 End SRCSTEPS.
 
 Section TGTSTEPS.
@@ -181,7 +195,7 @@ Section TGTSTEPS.
     ITR -> Prop := (tt_star (fun ktr => tgt_step r ktr))
   .
 
-  Definition tt_plus (r: ITR -> Prop): ITR -> Prop := tgt_plus (fun args ktr => (args = None) /\ (r ktr)).
+  (* Definition tt_plus (r: ITR -> Prop): ITR -> Prop := tgt_plus (fun args ktr => (args = None) /\ (r ktr)). *)
 
   (* properties *)
   Lemma tt_step_mon
@@ -283,6 +297,96 @@ End EXP_SIM.
 Hint Unfold simg_alt_exp.
 Hint Resolve simg_alt_exp_mon: paco.
 Hint Resolve cpn6_wcompat: paco.
+
+
+Section EXP_SIM_AUX.
+
+  Variable wfo: WF.
+
+  Definition _simg_alt_exp_aux
+             (simg_alt_exp_aux: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+             {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+    fun itr_src itr_tgt =>
+      (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
+      \/
+        ((<<TGT: (tt_step (fun ktr_tgt => (st_star (fun ktr_src => exists exp0, (simg_alt_exp_aux _ _ RR exp0 ktr_src ktr_tgt) /\ (wfo.(lt) exp0 exp)) itr_src)) itr_tgt)>>)
+         \/
+           (<<SRC: (st_step (fun ktr_src => (tt_star (fun ktr_tgt => exists exp0, (simg_alt_exp_aux _ _ RR exp0 ktr_src ktr_tgt) /\ (wfo.(lt) exp0 exp)) itr_tgt)) itr_src)>>)
+         \/
+           (<<TPLUS: (tgt_plus (fun targ ktr_tgt => (src_plus (fun sarg ktr_src => (<<EQ: targ = sarg>>) -> exists exp0, (simg_alt_exp_aux _ _ RR exp0 ktr_src ktr_tgt)) itr_src)) itr_tgt)>>)
+         \/
+           (<<SPLUS: (src_plus (fun sarg ktr_src =>
+                                  match sarg with
+                                  | Some _ => (tgt_plus (fun targ ktr_tgt => (<<EQ: sarg = targ>>) -> exists exp0, (simg_alt_exp_aux _ _ RR exp0 ktr_src ktr_tgt)) itr_tgt)
+                                  | None => (src_star (fun sarg0 ktr_src0 => (tgt_plus (fun targ ktr_tgt => (<<EQ: sarg0 = targ>>) -> exists exp0, (simg_alt_exp_aux _ _ RR exp0 ktr_src0 ktr_tgt)) itr_tgt)) ktr_src)
+                                  end
+                               ) itr_src)>>)
+        )
+  .
+
+  Definition simg_alt_exp_aux: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco6 _simg_alt_exp_aux bot6.
+
+  Lemma simg_alt_exp_aux_mon: monotone6 _simg_alt_exp_aux.
+  Proof.
+    ii. inv IN.
+    { left. eauto. }
+    right. des; [left | right; left | do 2 right; left | do 3 right].
+    { eapply tt_step_mon. 2: eauto. i; ss. eapply st_star_mon. 2: eauto. i; ss. des; eauto. }
+    { eapply st_step_mon. 2: eauto. i; ss. eapply tt_star_mon. 2: eauto. i; ss. des; eauto. }
+    { eapply tgt_plus_mon. 2: eauto. i; ss. eapply src_plus_mon. 2: eauto. i; ss.
+      specialize (H0 H1). des; eauto. }
+    { eapply src_plus_mon. 2: eauto. i; ss. des_ifs.
+      - eapply tgt_plus_mon. 2: eauto. i; ss. specialize (H0 H1). des; eauto.
+      - eapply src_star_mon. 2: eauto. i; ss.
+        eapply tgt_plus_mon. 2: eauto. i; ss. specialize (H1 H2). des; eauto.
+    }
+  Qed.
+
+  Hint Resolve simg_alt_exp_aux_mon: paco.
+  Hint Resolve cpn6_wcompat: paco.
+
+End EXP_SIM_AUX.
+Hint Unfold simg_alt_exp_aux.
+Hint Resolve simg_alt_exp_aux_mon: paco.
+Hint Resolve cpn6_wcompat: paco.
+
+
+Section AUX2EXP.
+
+  Lemma simg_alt_exp_aux_implies_simg_alt_exp
+        R0 R1 (RR: R0 -> R1 -> Prop)
+        (itr_src: itree eventE R0)
+        (itr_tgt: itree eventE R1)
+        (wfo: WF)
+        exp
+        (SIM: simg_alt_exp_aux wfo RR exp (itr_src) (itr_tgt))
+    :
+    simg_alt_exp wfo RR exp itr_src itr_tgt.
+  Proof.
+    ginit. revert_until RR. gcofix CIH. i.
+    (* move exp before CIH. revert_until exp. pattern exp. revert exp. *)
+    (* apply (well_founded_induction wfo.(wf)). intros exp IHe. i. *)
+    punfold SIM. inv SIM; des.
+    { gstep. left. esplits; eauto. }
+    { gstep. right; left. eapply tt_step_mon. 2: eauto. i; ss.
+      eapply st_star_mon. 2: eauto. i; ss. des. esplits; eauto.
+      pclearbot. gfinal. left; eauto.
+    }
+    { gstep. do 2 right; left. eapply st_step_mon. 2: eauto. i; ss.
+      eapply tt_star_mon. 2: eauto. i; ss. des. esplits; eauto.
+      pclearbot. gfinal. left; eauto.
+    }
+    { gstep. do 3 right; left. eapply tgt_plus_mon. 2: eauto. i; ss.
+      eapply src_plus_mon. 2: eauto. i; ss. specialize (H0 H1). des. exists exp0.
+      pclearbot. gfinal. left; eauto.
+    }
+    { gstep. do 4 right.
+
+
+
+
+End AUX2EXP.
+
 
 (* Section EXP_SIM. *)
 
