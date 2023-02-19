@@ -386,11 +386,11 @@ Section EXP_SIM.
              (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop)
              {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop :=
     fun itr_src itr_tgt =>
-      (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
+      (exists rs rt, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
       \/
         (exists arg,
             ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
-              (forall rt rs (EQ: rt = rs), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+              (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (
           (<<TGT: (tt_step (fun ktr_tgt =>
@@ -432,6 +432,217 @@ End EXP_SIM.
 Hint Unfold simg_alt_exp.
 Hint Resolve simg_alt_exp_mon: paco.
 Hint Resolve cpn6_wcompat: paco.
+
+
+Section IMP_SIM.
+
+  Inductive _simg_alt_imp
+            (simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop)
+            {R0 R1} (RR: R0 -> R1 -> Prop)
+            (itr_src: itree eventE R0) (itr_tgt: itree eventE R1): Prop :=
+  | simg_alt_imp_intro
+      (SIM:
+        (exists rs rt, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
+        \/
+          (exists arg,
+              ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
+                (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+        \/
+          (
+            (<<TGT: (tt_step (fun ktr_tgt =>
+                                (st_step (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src)
+                                \/ (_simg_alt_imp simg_alt_imp RR itr_src ktr_tgt)
+                             ) itr_tgt)>>)
+            \/
+              (<<SRC: (st_step (fun ktr_src =>
+                                  (tt_step (fun ktr_tgt => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_tgt)
+                                  \/ (_simg_alt_imp simg_alt_imp RR ktr_src itr_tgt)
+                               ) itr_src)>>)
+      ))
+  .
+
+  Lemma _simg_alt_imp_ind2
+        (r: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop)
+        R0 R1 (RR: R0 -> R1 -> Prop)
+        (P: (itree eventE R0) -> (itree eventE R1) -> Prop)
+        (RET: forall
+            itr_src itr_tgt rs rt
+            (TGT: is_ret rt itr_tgt)
+            (SRC: is_ret rs itr_src)
+            (SIM: RR rs rt),
+            P itr_src itr_tgt)
+        (OBS: forall
+            itr_src itr_tgt arg
+            (SRC: is_obs arg itr_src)
+            (TGT: is_obs arg itr_tgt)
+            (SIM: forall rs rt (EQ: rs = rt),
+                obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            P itr_src itr_tgt)
+        (TGT: forall
+            itr_src itr_tgt
+            (SIM: tt_step (fun ktr_tgt => (st_step (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) \/ ((<<SIM: _simg_alt_imp r RR itr_src ktr_tgt>>) /\ (<<IH: P itr_src ktr_tgt>>))) itr_tgt),
+            P itr_src itr_tgt)
+        (SRC: forall
+            itr_src itr_tgt
+            (SIM: st_step (fun ktr_src => (tt_step (fun ktr_tgt => (r _ _ RR ktr_src ktr_tgt)) itr_tgt) \/ ((<<SIM: _simg_alt_imp r RR ktr_src itr_tgt>>) /\ (<<IH: P ktr_src itr_tgt>>))) itr_src),
+            P itr_src itr_tgt)
+    :
+    forall itr_src itr_tgt
+      (SIM: _simg_alt_imp r RR itr_src itr_tgt),
+      P itr_src itr_tgt.
+  Proof.
+    fix IH 3. i. inv SIM. des.
+    { eapply RET; eauto. }
+    { eapply OBS; eauto. }
+    { eapply TGT; eauto. inv TGT0.
+      - econs 1. des; [left|right]; eauto.
+      - econs 2. i. specialize (REL x). des; [left|right]; eauto.
+      - econs 3. destruct REL as [x REL]. exists x. des; [left|right]; eauto.
+    }
+    { eapply SRC; eauto. inv SRC0.
+      - econs 1. des; [left|right]; eauto.
+      - econs 2. destruct REL as [x REL]. exists x. des; [left|right]; eauto.
+      - econs 3. i. specialize (REL x). des; [left|right]; eauto.
+    }
+  Qed.
+
+  Definition simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop := paco5 _simg_alt_imp bot5.
+
+  Lemma simg_alt_imp_mon: monotone5 _simg_alt_imp.
+  Proof.
+    ii. induction IN using _simg_alt_imp_ind2.
+    { econs. left; eauto. }
+    { econs. right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+      eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss. auto.
+    }
+    { econs. do 2 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
+      eapply st_step_mon; [|eauto]. i; ss. auto.
+    }
+    { econs. do 2 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
+      eapply tt_step_mon; [|eauto]. i; ss. auto.
+    }
+  Qed.
+  Hint Resolve simg_alt_imp_mon: paco.
+  Hint Resolve cpn5_wcompat: paco.
+
+
+  Variant simg_alt_imp_indC
+          (simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+    | simg_alt_imp_indC_ret
+        itr_src itr_tgt rs rt
+        (TGT: is_ret rt itr_tgt)
+        (SRC: is_ret rs itr_src)
+        (SIM: RR rs rt)
+      :
+      simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
+    | simg_alt_imp_indC_obs
+        itr_src itr_tgt arg
+        (SRC: is_obs arg itr_src)
+        (TGT: is_obs arg itr_tgt)
+        (SIM: forall rs rt (EQ: rs = rt),
+            obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
+      :
+      simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
+    | simg_alt_imp_indC_tgt
+        itr_src itr_tgt
+        (SIM: tt_step (fun ktr_tgt => (st_step (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) \/ (<<SIM: simg_alt_imp _ _ RR itr_src ktr_tgt>>)) itr_tgt)
+      :
+      simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
+    | simg_alt_imp_indC_src
+        itr_src itr_tgt
+        (SIM: st_step (fun ktr_src => (tt_step (fun ktr_tgt => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_tgt) \/ (<<SIM: simg_alt_imp _ _ RR ktr_src itr_tgt>>)) itr_src)
+      :
+      simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
+  .
+
+  Lemma simg_alt_imp_indC_mon: monotone5 simg_alt_imp_indC.
+  Proof.
+    ii. inv IN.
+    { econs 1; eauto. }
+    { econs 2; eauto. i. specialize (SIM _ _ EQ).
+      eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss. auto.
+    }
+    { econs 3; eauto. eapply tt_step_mon; [|eauto]. i; ss. des; eauto. left.
+      eapply st_step_mon; [|eauto]. i; ss. auto.
+    }
+    { econs 4; eauto. eapply st_step_mon; [|eauto]. i; ss. des; eauto. left.
+      eapply tt_step_mon; [|eauto]. i; ss. auto.
+    }
+  Qed.
+  Hint Resolve simg_alt_imp_indC_mon: paco.
+
+  Lemma simg_alt_imp_indC_spec:
+    simg_alt_imp_indC <6= gupaco5 _simg_alt_imp (cpn5 _simg_alt_imp).
+  Proof.
+    eapply wrespect5_uclo; eauto with paco.
+    econs; eauto with paco. i. inv PR.
+    { econs. left; eauto. }
+    { econs. right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+      eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
+      apply rclo5_base. auto.
+    }
+    { econs. do 2 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right].
+      - eapply st_step_mon; [|eauto]. i; ss. apply rclo5_base. auto.
+      - eapply simg_alt_imp_mon; eauto. i. apply rclo5_base; auto.
+    }
+    { econs. do 2 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right].
+      - eapply tt_step_mon; [|eauto]. i; ss. apply rclo5_base. auto.
+      - eapply simg_alt_imp_mon; eauto. i. apply rclo5_base; auto.
+    }
+  Qed.
+
+  Lemma simg_alt_imp_ind R0 R1 (RR: R0 -> R1 -> Prop)
+        (P: (itree eventE R0) -> (itree eventE R1) -> Prop)
+        (RET: forall
+            itr_src itr_tgt rs rt
+            (TGT: is_ret rt itr_tgt)
+            (SRC: is_ret rs itr_src)
+            (SIM: RR rs rt),
+            P itr_src itr_tgt)
+        (OBS: forall
+            itr_src itr_tgt arg
+            (SRC: is_obs arg itr_src)
+            (TGT: is_obs arg itr_tgt)
+            (SIM: forall rs rt (EQ: rs = rt),
+                obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            P itr_src itr_tgt)
+        (TGT: forall
+            itr_src itr_tgt
+            (SIM: tt_step (fun ktr_tgt => (st_step (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) \/ ((<<SIM: simg_alt_imp RR itr_src ktr_tgt>>) /\ (<<IH: P itr_src ktr_tgt>>))) itr_tgt),
+            P itr_src itr_tgt)
+        (SRC: forall
+            itr_src itr_tgt
+            (SIM: st_step (fun ktr_src => (tt_step (fun ktr_tgt => (simg_alt_imp RR ktr_src ktr_tgt)) itr_tgt) \/ ((<<SIM: simg_alt_imp RR ktr_src itr_tgt>>) /\ (<<IH: P ktr_src itr_tgt>>))) itr_src),
+            P itr_src itr_tgt)
+    :
+    forall itr_src itr_tgt
+      (SIM: simg_alt_imp RR itr_src itr_tgt),
+      P itr_src itr_tgt.
+  Proof.
+    i. punfold SIM. induction SIM using _simg_alt_imp_ind2; i; clarify.
+    { eapply RET; eauto. }
+    { eapply OBS; eauto. i. specialize (SIM _ _ EQ).
+      eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
+      pclearbot. eauto.
+    }
+    { eapply TGT; eauto.
+      eapply tt_step_mon; [|eauto]. i; ss. des; [left|des; right; split]; eauto.
+      - eapply st_step_mon; [|eauto]. i; ss. pclearbot. auto.
+      - pfold. auto.
+    }
+    { eapply SRC; eauto.
+      eapply st_step_mon; [|eauto]. i; ss. des; [left|des; right; split]; eauto.
+      - eapply tt_step_mon; [|eauto]. i; ss. pclearbot. auto.
+      - pfold. auto.
+    }
+  Qed.
+
+End IMP_SIM.
+Hint Constructors _simg_alt_imp.
+Hint Unfold simg_alt_imp.
+Hint Resolve simg_alt_imp_mon: paco.
+Hint Resolve cpn5_wcompat: paco.
 
 
 (** obs steps asynchronous **)

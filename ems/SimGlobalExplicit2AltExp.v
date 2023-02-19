@@ -97,7 +97,6 @@ Section PROOF.
       exists (Some (f_tgt0, f_src0)). gfinal. left. eapply CIH; eauto.
     }
     { destruct SIM0 as [SIM | SIM]; clarify.
-      (* clear IHt. *)
       gstep. do 2 right. right. econs 1.
       eapply src_aux; eauto.
     }
@@ -108,7 +107,6 @@ Section PROOF.
       gfinal. left; eauto.
     }
     { des. destruct SIM0 as [SIM | SIM]; clarify.
-      (* clear IHt. *)
       gstep. do 2 right. right. econs 2. exists x.
       eapply src_aux; eauto.
     }
@@ -120,7 +118,6 @@ Section PROOF.
     }
     { gstep. do 2 right. right. econs 3. i.
       destruct (SIM0 x) as [SIM | SIM]; clarify.
-      (* clear IHt. *)
       eapply src_aux; eauto.
     }
     { des. destruct SIM0 as [SIM | SIM]; clarify.
