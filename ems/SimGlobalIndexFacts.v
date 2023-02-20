@@ -975,6 +975,113 @@ Qed.
 
 End TRANS.
 
+
+Section DUAL.
+
+  (* Variable R0 R1: Type. *)
+  (* Let ITR0 := itree eventE R0. *)
+  (* Let ITR1 := itree eventE R1. *)
+
+  CoFixpoint dualize (R: Type) (itr: itree eventE R): itree eventE R :=
+    match (observe itr) with
+    | RetF r => Ret r
+    | TauF ktr => tau;; (dualize ktr)
+    | @VisF _ _ _ _ e ktr =>
+        Vis (match e with
+             | @Choose X => @Take X 
+             | @Take X => (@Choose X)
+             | Syscall fn varg rvs => (Syscall fn varg rvs)
+             end) (fun x => dualize (ktr x))
+    end.
+
+  Lemma observe_dualize 
+        R (itr: itree eventE R)
+    :
+    observe (dualize itr) = 
+      match (observe itr) with
+      | RetF r => RetF r
+      | TauF ktr => TauF (dualize ktr)
+      | @VisF _ _ _ _ e ktr =>
+          VisF (match e with
+                | @Choose X => @Take X 
+                | @Take X => (@Choose X)
+                | Syscall fn varg rvs => (Syscall fn varg rvs)
+                end) (fun x => dualize (ktr x))
+      end.
+  Proof.
+    unfold dualize. ides itr; ss.
+  Qed.
+
+  Lemma dualize_involution
+        R (itr: itree eventE R)
+    :
+    dualize (dualize itr) = itr.
+  Proof.
+    eapply bisim_is_eq. revert itr. pcofix CIH. i. pfold. rr. do 2 rewrite observe_dualize.
+    destruct (observe itr); ss; eauto.
+    destruct e; ss; auto.
+  Qed.
+
+  Lemma dualize_ret
+        R (r: R)
+    :
+    dualize (Ret r) = Ret r.
+  Proof. eapply observe_eta. ss. Qed.
+
+  Lemma dualize_tau
+        R ktr
+    :
+    @dualize R (tau;; ktr) = tau;; (dualize ktr).
+  Proof. eapply observe_eta. ss. Qed.
+
+  Lemma dualize_vis
+        R X (e: eventE X) ktr
+    :
+    @dualize R (trigger e >>= ktr) =
+      trigger (match e with
+               | @Choose X => @Take X 
+               | @Take X => (@Choose X)
+               | Syscall fn varg rvs => (Syscall fn varg rvs)
+               end) >>= (fun x => dualize (ktr x)).
+  Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
+
+  Theorem simg_dualize
+          R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop)
+          (itr0: itree eventE R0)
+          (itr1: itree eventE R1)
+          f_src f_tgt
+          (SIM: simg RR f_src f_tgt itr0 itr1)
+    :
+    simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (dualize itr1) (dualize itr0).
+  Proof.
+    ginit. revert_until RR. gcofix CIH. i. induction SIM using simg_ind.
+    - guclo simg_indC_spec. rewrite ! dualize_ret. econs 1; eauto.
+    - gstep. rewrite ! dualize_vis. econs 2. i. specialize (SIM _ _ EQ). gbase. subst; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize_vis. des. econs; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize_vis. econs; eauto. i. specialize (SIM x). des. eauto.
+    - guclo simg_indC_spec. rewrite ! dualize_vis. econs; eauto. i. specialize (SIM x). des. eauto.
+    - guclo simg_indC_spec. rewrite ! dualize_vis. des. econs; eauto.
+    - gstep. econs; eauto. gbase; eauto.
+  Qed.
+
+  Corollary dualize_simg
+          R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop)
+          (itr0: itree eventE R0)
+          (itr1: itree eventE R1)
+          f_src f_tgt
+          (SIM: simg RR f_src f_tgt (dualize itr0) (dualize itr1))
+    :
+    simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (itr1) (itr0).
+  Proof.
+    apply simg_dualize in SIM. rewrite ! dualize_involution in SIM. eauto.
+  Qed.
+
+End DUAL.
+
+
+
 Context {CONFS CONFT: EMSConfig}.
 Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
 
