@@ -3,7 +3,7 @@ Require Import ITreelib.
 Require Import Any.
 Require Import STS.
 Require Import Behavior.
-Require Import ModSem.
+Require Import ModSemE.
 Require Import Skeleton.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.

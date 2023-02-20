@@ -3,7 +3,7 @@ Require Import ITreelib.
 Require Import Any.
 Require Import STS.
 Require Import Behavior.
-Require Import ModSem.
+Require Import ModSemE.
 Require Import Skeleton.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
@@ -11,7 +11,7 @@ Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 From Ordinal Require Import ClassicalOrdinal.
 
-Require Import SimGlobalAlts SimGlobalIndexTemp.
+Require Import SimGlobalAlts SimGlobalIndex.
 
 Set Implicit Arguments.
 
