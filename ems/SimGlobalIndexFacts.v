@@ -18,6 +18,45 @@ Set Implicit Arguments.
 
 Section SIM.
 
+Theorem simg_refl: forall (R: Type) ps pt itr,
+    simg (fun ps' pt' (rs rt: R) => ps = ps' /\ pt = pt' /\ rs = rt) ps pt itr itr.
+Proof.
+  i.
+  ginit.
+  revert_until R. revert R.
+  gcofix CIH.
+  i.
+  ides itr.
+  - gstep. econs; eauto.
+  - guclo simg_indC_spec. econs; eauto.
+    guclo simg_indC_spec. econs; eauto.
+    gstep. econs; eauto.
+    { gbase. eapply CIH. }
+    { eapply Ord.S_lt. }
+    { eapply Ord.S_lt. }
+  - destruct e.
+    + rewrite <- ! bind_trigger.
+      guclo simg_indC_spec. econsr; eauto. i.
+      guclo simg_indC_spec. econs; eauto. esplits.
+      gstep. econs; eauto.
+      { gbase. eapply CIH. }
+      { eapply Ord.S_lt. }
+      { eapply Ord.S_lt. }
+    + rewrite <- ! bind_trigger.
+      guclo simg_indC_spec. econs; eauto. i.
+      guclo simg_indC_spec. econsr; eauto. esplits.
+      gstep. econs; eauto.
+      { gbase. eapply CIH. }
+      { eapply Ord.S_lt. }
+      { eapply Ord.S_lt. }
+    + rewrite <- ! bind_trigger.
+      guclo simg_indC_spec. econs; eauto. i. subst.
+      gstep. econs; eauto.
+      { gbase. eapply CIH. }
+      { eapply Ord.S_lt. }
+      { eapply Ord.S_lt. }
+Qed.
+
 Definition postcond_mon {R0 R1: Type} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop): Prop :=
   forall f_src0 f_src1 f_tgt0 f_tgt1 r_src r_tgt
          (LE: (f_src0 <= f_src1)%ord) (LE: (f_tgt0 <= f_tgt1)%ord),
