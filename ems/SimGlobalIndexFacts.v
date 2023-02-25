@@ -1191,7 +1191,7 @@ End DUAL.
 
 Section INIT.
 
-  CoFixpoint initialize (E: Type -> Type) (R: Type) (itr: itree (E +' eventE) R): itree eventE R :=
+  CoFixpoint initialize (R: Type) (itr: itree (E +' eventE) R): itree eventE R :=
     match (observe itr) with
     | RetF r => Ret r
     | TauF ktr => tau;; (initialize ktr)
@@ -1199,14 +1199,104 @@ Section INIT.
     | @VisF _ _ _ X (inr1 e) ktr => Vis e (fun x => initialize (ktr x))
     end.
 
+  Lemma observe_initialize 
+        R (itr: itree (E +' eventE) R)
+    :
+    observe (initialize itr) = 
+      match (observe itr) with
+      | RetF r => RetF r
+      | TauF ktr => TauF (initialize ktr)
+      | @VisF _ _ _ _ (inl1 e) ktr =>
+          VisF (Take void) (@Empty_set_rect _)
+      | @VisF _ _ _ X (inr1 e) ktr =>
+          VisF e (fun x => initialize (ktr x))
+      end.
+  Proof. unfold initialize. ides itr; ss. destruct e; ss. Qed.
+
+  Lemma initialize_ret
+        R (r: R)
+    :
+    initialize (Ret r) = Ret r.
+  Proof. eapply observe_eta. ss. Qed.
+
+  Lemma initialize_tau
+        R ktr
+    :
+    @initialize R (tau;; ktr) = tau;; (initialize ktr).
+  Proof. eapply observe_eta. ss. Qed.
+
+  Lemma initialize_vis_l
+        R X (e: E X) (ktr: X -> itree (E +' eventE) R)
+    :
+    @initialize R (trigger e >>= ktr) = trigger (Take void) >>= (@Empty_set_rect _).
+  Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
+
+  Lemma initialize_vis_r
+        R X (e: eventE X) (ktr: X -> itree (E +' eventE) R)
+    :
+    @initialize R (trigger e >>= ktr) = trigger e >>= (fun x => initialize (ktr x)).
+  Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
+
+
+  CoFixpoint embed_E (R: Type) (itr: itree (eventE) R): itree (E +' eventE) R :=
+    match (observe itr) with
+    | RetF r => Ret r
+    | TauF ktr => tau;; (embed_E ktr)
+    | @VisF _ _ _ X (e) ktr => Vis (inr1 e) (fun x => embed_E (ktr x))
+    end.
+
+  Lemma observe_embed_E 
+        R (itr: itree (eventE) R)
+    :
+    observe (embed_E itr) = 
+      match (observe itr) with
+      | RetF r => RetF r
+      | TauF ktr => TauF (embed_E ktr)
+      | @VisF _ _ _ X (e) ktr =>
+          VisF (inr1 e) (fun x => embed_E (ktr x))
+      end.
+  Proof. unfold embed_E. ides itr; ss. Qed.
+
+  Lemma embed_E_ret
+        R (r: R)
+    :
+    embed_E (Ret r) = Ret r.
+  Proof. eapply observe_eta. ss. Qed.
+
+  Lemma embed_E_tau
+        R ktr
+    :
+    @embed_E R (tau;; ktr) = tau;; (embed_E ktr).
+  Proof. eapply observe_eta. ss. Qed.
+
+  Lemma embed_E_vis
+        R X (e: eventE X) (ktr: X -> itree (eventE) R)
+    :
+    @embed_E R (trigger e >>= ktr) = trigger (inr1 e) >>= (fun x => embed_E (ktr x)).
+  Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
+
+  Lemma initialize_embed_E
+        (R: Type) (itr: itree (eventE) R)
+    :
+    initialize (embed_E itr) = itr.
+  Proof.
+    eapply bisim_is_eq. revert itr. pcofix CIH. i. pfold. rr.
+    rewrite observe_initialize, observe_embed_E.
+    destruct (observe itr); ss; eauto.
+  Qed.
+
 End INIT.
 
+Ltac rewrite_initialize :=
+  try (rewrite ! initialize_ret);
+  try (rewrite ! initialize_tau);
+  try (rewrite ! initialize_vis_l);
+  try (rewrite ! initialize_vis_r).
 
 Context {CONFS CONFT: EMSConfig}.
 Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
 
 Require Import SimSTSIndex.
-
 
 Theorem adequacy_global_itree itr_src itr_tgt o_src0 o_tgt0
         (SIM: simg (E:=E) (fun _ _ => eq) o_src0 o_tgt0 itr_src itr_tgt)
@@ -1221,7 +1311,7 @@ Proof.
   generalize itr_tgt at 1 as md_tgt.
   generalize itr_src at 1 as md_src. i. ginit.
   revert o_src0 o_tgt0 itr_src itr_tgt SIM. gcofix CIH.
-  i. induction SIM using simg_ind; i; clarify.
+  i. induction SIM using simg_ind; rewrite_initialize; i; clarify.
   { gstep. destruct (finalize r_tgt) eqn:T.
     { eapply sim_fin; ss; cbn; des_ifs; rewrite FINSAME in *; clarify. }
     { eapply sim_angelic_src.
@@ -1242,7 +1332,10 @@ Proof.
     eapply step_tau_iff in STEP. des. clarify. esplits; et.
   }
   { des. guclo sim_indC_spec. eapply sim_indC_demonic_src; ss.
-    esplits; eauto. eapply step_trigger_choose; et.
+    esplits; eauto.
+    set (ktr_src1 := fun (x: X) => initialize (ktr_src0 x)).
+    change (initialize (ktr_src0 x)) with (ktr_src1 x).
+    eapply step_trigger_choose; et.
   }
   { guclo sim_indC_spec. eapply sim_indC_demonic_tgt; ss.
     i.  eapply step_trigger_choose_iff in STEP. des. clarify.
@@ -1253,9 +1346,15 @@ Proof.
     hexploit (SIM x); et. i. des. esplits; et.
   }
   { des. guclo sim_indC_spec. eapply sim_indC_angelic_tgt; ss.
-    esplits; eauto. eapply step_trigger_take; et.
+    esplits; eauto.
+    set (ktr_tgt1 := fun (x: X) => initialize (ktr_tgt0 x)).
+    change (initialize (ktr_tgt0 x)) with (ktr_tgt1 x).
+    eapply step_trigger_take; et.
   }
   { gstep. eapply sim_progress; eauto. gbase. auto. }
+  { guclo sim_indC_spec. eapply sim_indC_angelic_src; ss. i.
+    eapply step_trigger_take_iff in STEP. des. clarify.
+  }
 Qed.
 
 
@@ -1264,13 +1363,21 @@ Let ms_src: ModSemL.t := md_src.(ModL.enclose).
 Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 
 Section ADEQUACY.
-Hypothesis (SIM: simg (fun _ _ => eq) 0 0 (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src))) (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt)))).
+
+Hypothesis (SIM: simg (fun _ _ => eq) 0 0 (embed_E (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src)))) (embed_E (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt))))).
 
 
 Theorem adequacy_global: Beh.of_program (@ModL.compile _ CONFT md_tgt) <1= Beh.of_program (@ModL.compile _ CONFS md_src).
 Proof.
+  unfold ModL.compile.
+  replace (@ModSemL.initial_itr (ModL.enclose md_tgt) CONFT (Some (ModL.wf md_tgt))) with
+    (initialize (embed_E (@ModSemL.initial_itr (ModL.enclose md_tgt) CONFT (Some (ModL.wf md_tgt))))).
+  replace (@ModSemL.initial_itr (ModL.enclose md_src) CONFS (Some (ModL.wf md_src))) with
+    (initialize (embed_E (@ModSemL.initial_itr (ModL.enclose md_src) CONFS (Some (ModL.wf md_src))))).
   eapply adequacy_global_itree. eapply SIM.
+  all: apply initialize_embed_E.
 Qed.
+
 End ADEQUACY.
 End SIM.
 
