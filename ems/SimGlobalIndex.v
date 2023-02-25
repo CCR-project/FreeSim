@@ -22,12 +22,17 @@ Section SIM.
 
 Section TY.
 (* Context `{R: Type}. *)
+Variable E: Type -> Type.
+
 Inductive _simg
-          (simg: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-          {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+          (simg: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
+          {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop :=
 | simg_ret
     r_src r_tgt
-    (SIM: RR f_src f_tgt r_src r_tgt)
+    f_src' f_tgt'
+    (LE: (f_src' <= f_src)%ord)
+    (LE: (f_tgt' <= f_tgt)%ord)
+    (SIM: RR f_src' f_tgt' r_src r_tgt)
   :
     _simg simg RR f_src f_tgt (Ret r_src) (Ret r_tgt)
 | simg_syscall
@@ -90,15 +95,26 @@ Inductive _simg
     (TGT: (f_tgt0 < f_tgt)%ord)
   :
     _simg simg RR f_src f_tgt itr_src itr_tgt
+
+| simg_event
+    X (e: E X)
+    ktr_src0 ktr_tgt0
+    f_src0 f_tgt0
+    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+  :
+    _simg simg RR f_src f_tgt (trigger e >>= ktr_src0) (trigger e >>= ktr_tgt0)
 .
 
-Lemma _simg_ind2 (r: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+Lemma _simg_ind2 (r: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
       R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
-      (P: Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+      (P: Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
       (RET: forall
           f_src f_tgt
+          f_src' f_tgt'
+          (LE: (f_src' <= f_src)%ord)
+          (LE: (f_tgt' <= f_tgt)%ord)
           r_src r_tgt
-          (SIM: RR f_src f_tgt r_src r_tgt),
+          (SIM: RR f_src' f_tgt' r_src r_tgt),
           P f_src f_tgt (Ret r_src) (Ret r_tgt))
       (SYSCALL: forall
           f_src f_tgt
@@ -158,6 +174,12 @@ Lemma _simg_ind2 (r: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.
           (SRC: (f_src0 < f_src)%ord)
           (TGT: (f_tgt0 < f_tgt)%ord),
           P f_src f_tgt itr_src itr_tgt)
+      (EVENT: forall
+          f_src f_tgt
+          f_src0 f_tgt0
+          X (e: E X) ktr_src0 ktr_tgt0
+          (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), r _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)),
+          P f_src f_tgt (trigger e >>= ktr_src0) (trigger e >>= ktr_tgt0))
   :
     forall f_src f_tgt itr_src itr_tgt
            (SIM: _simg r RR f_src f_tgt itr_src itr_tgt),
@@ -173,9 +195,10 @@ Proof.
   { eapply TAKEL; eauto. }
   { eapply TAKER; eauto. des. esplits; eauto. }
   { eapply PROGRESS; eauto. }
+  { eapply EVENT; eauto. }
 Qed.
 
-Definition simg: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco7 _simg bot7.
+Definition simg: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := paco7 _simg bot7.
 
 Lemma simg_mon: monotone7 _simg.
 Proof.
@@ -189,17 +212,21 @@ Proof.
   { econs 7; eauto. i. spc SIM. des; et. }
   { econs 8; eauto. des. esplits; eauto. }
   { econs 9; eauto. }
+  { econs 10; eauto. }
 Qed.
 Hint Resolve simg_mon: paco.
 Hint Resolve cpn7_wcompat: paco.
 
 
 Variant simg_indC
-          (simg: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-          {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+          (simg: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
+          {R0 R1} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop :=
 | simg_indC_ret
     r_src r_tgt
-    (SIM: RR f_src f_tgt r_src r_tgt)
+    f_src' f_tgt'
+    (LE: (f_src' <= f_src)%ord)
+    (LE: (f_tgt' <= f_tgt)%ord)
+    (SIM: RR f_src' f_tgt' r_src r_tgt)
   :
     simg_indC simg RR f_src f_tgt (Ret r_src) (Ret r_tgt)
 | simg_indC_syscall
@@ -253,6 +280,13 @@ Variant simg_indC
     (SIM: exists x, simg _ _ RR f_src f_tgt0 itr_src0 (ktr_tgt0 x))
   :
     simg_indC simg RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0)
+
+| simg_indC_event
+    f_src0 f_tgt0
+    X (e: E X) ktr_src0 ktr_tgt0
+    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+  :
+    simg_indC simg RR f_src f_tgt (trigger e >>= ktr_src0) (trigger e >>= ktr_tgt0)
 .
 
 Lemma simg_indC_mon: monotone7 simg_indC.
@@ -266,6 +300,7 @@ Proof.
   { econs 6; eauto. }
   { econs 7; eauto. }
   { econs 8; eauto. des. esplits; eauto. }
+  { econs 9; eauto. }
 Qed.
 Hint Resolve simg_indC_mon: paco.
 
@@ -282,14 +317,18 @@ Proof.
   { econs 6; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
   { econs 7; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
   { des. econs 8; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { econs 10; eauto. i. eapply rclo7_base. auto. }
 Qed.
 
 Lemma simg_ind R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
-      (P: Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+      (P: Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
       (RET: forall
           f_src f_tgt
+          f_src' f_tgt'
+          (LE: (f_src' <= f_src)%ord)
+          (LE: (f_tgt' <= f_tgt)%ord)
           r_src r_tgt
-          (SIM: RR f_src f_tgt r_src r_tgt),
+          (SIM: RR f_src' f_tgt' r_src r_tgt),
           P f_src f_tgt (Ret r_src) (Ret r_tgt))
       (SYSCALL: forall
           f_src0 f_tgt0
@@ -349,6 +388,12 @@ Lemma simg_ind R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
           (SRC: (f_src0 < f_src)%ord)
           (TGT: (f_tgt0 < f_tgt)%ord),
           P f_src f_tgt itr_src itr_tgt)
+      (EVENT: forall
+          f_src0 f_tgt0
+          f_src f_tgt
+          X (e: E X) ktr_src0 ktr_tgt0
+          (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)),
+          P f_src f_tgt (trigger e >>= ktr_src0) (trigger e >>= ktr_tgt0))
   :
     forall f_src f_tgt itr_src itr_tgt
            (SIM: simg RR f_src f_tgt itr_src itr_tgt),
@@ -364,6 +409,7 @@ Proof.
   { eapply TAKEL; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. pfold. auto. }
   { eapply TAKER; eauto. des. esplits; eauto. pfold. auto. }
   { eapply PROGRESS; eauto. pclearbot. auto. }
+  { eapply EVENT; eauto. i. hexploit SIM; eauto. i. des. pclearbot. eauto. }
 Qed.
 
 End TY.

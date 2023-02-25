@@ -22,10 +22,12 @@ Set Implicit Arguments.
 
 Section EQUIV.
 
+  Variable E: Type -> Type.
+
   Theorem eq1_simg_implies_simg_alt_exp
           R0 R1 (RR: R0 -> R1 -> Prop)
-          (itr_src: itree eventE R0)
-          (itr_tgt: itree eventE R1)
+          (itr_src: itree (E +' eventE) R0)
+          (itr_tgt: itree (E +' eventE) R1)
           (f_src f_tgt: Ord.t)
           (SIM: simg (fun _ _ => RR) f_src f_tgt (itr_src) (itr_tgt))
     :
@@ -39,8 +41,8 @@ Section EQUIV.
 
   Theorem eq2_simg_alt_exp_implies_simg_alt_imp
           R0 R1 (RR: R0 -> R1 -> Prop)
-          (itr_src: itree eventE R0)
-          (itr_tgt: itree eventE R1)
+          (itr_src: itree (E +' eventE) R0)
+          (itr_tgt: itree (E +' eventE) R1)
           wfo (exp: wfo.(T))
           (SIM: simg_alt_exp wfo RR exp (itr_src) (itr_tgt))
     :
@@ -51,8 +53,8 @@ Section EQUIV.
 
   Theorem eq3_simg_alt_imp_implies_simg
           R0 R1 (RR: R0 -> R1 -> Prop)
-          (itr_src: itree eventE R0)
-          (itr_tgt: itree eventE R1)
+          (itr_src: itree (E +' eventE) R0)
+          (itr_tgt: itree (E +' eventE) R1)
           (SIM: simg_alt_imp RR (itr_src) (itr_tgt))
     :
     forall f_src f_tgt, simg (fun _ _ => RR) f_src f_tgt itr_src itr_tgt.
@@ -62,7 +64,7 @@ Section EQUIV.
 
   Corollary simg_bot_flag_up
             R0 R1 RR st_src st_tgt f_src0 f_tgt0 f_src f_tgt
-            (SIM: @simg R0 R1 (fun _ _ => RR) f_src0 f_tgt0 st_src st_tgt)
+            (SIM: @simg E R0 R1 (fun _ _ => RR) f_src0 f_tgt0 st_src st_tgt)
     :
     simg (fun _ _ => RR) f_src f_tgt st_src st_tgt.
   Proof.
