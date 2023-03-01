@@ -17,11 +17,12 @@ Set Implicit Arguments.
 
 Section SIM.
 
+  Variable E: Type -> Type.
   Variable wfo: WF.
 
   Variant _simg_exp
-          (simg_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-          {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+          (simg_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: wfo.(T)): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop :=
     | simg_exp_ret
         r_src r_tgt
         (SIM: RR r_src r_tgt)
@@ -78,9 +79,16 @@ Section SIM.
         (SIM: exists x, @simg_exp _ _ RR f_src0 f_tgt0 itr_src0 (ktr_tgt0 x))
       :
       _simg_exp simg_exp RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0)
+
+    | simg_exp_eventE
+        X (e: E X) ktr_src0 ktr_tgt0
+        f_src0 f_tgt0
+        (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg_exp _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+      :
+      _simg_exp simg_exp RR f_src f_tgt (trigger e >>= ktr_src0) (trigger e >>= ktr_tgt0)
   .
 
-  Definition simg_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco7 _simg_exp bot7.
+  Definition simg_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := paco7 _simg_exp bot7.
 
   Lemma simg_exp_mon: monotone7 _simg_exp.
   Proof.
@@ -93,14 +101,15 @@ Section SIM.
     { econs 6; eauto. }
     { econs 7; eauto. }
     { econs 8; eauto. des. esplits; eauto. }
+    { econs 9; eauto. }
   Qed.
   Hint Resolve simg_exp_mon: paco.
   Hint Resolve cpn7_wcompat: paco.
 
 
   Variant simg_exp_leC
-          (simg_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-          {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+          (simg_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: wfo.(T)): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop :=
     | simg_exp_leC_intro
         itr_src itr_tgt
         f_src0 f_tgt0
@@ -155,6 +164,7 @@ Section SIM.
       - econs 8. eauto. eexists. eapply rclo7_clo. econs. left; eauto. right; eauto.
         eapply rclo7_base; eauto.
     }
+    { econs 9. i. clarify. eapply rclo7_base. eauto. }
   Qed.
 
 End SIM.

@@ -16,8 +16,9 @@ Set Implicit Arguments.
 
 Section COMMON.
 
+  Variable E: Type -> Type.
   Variable R: Type.
-  Let ITR := (itree eventE R).
+  Let ITR := (itree (E +' eventE) R).
 
   Variant obs_step (args: string * Any.t * (Any.t -> Prop) * Any.t) (r: ITR -> Prop): ITR -> Prop :=
     | obs_step_syscall
@@ -35,6 +36,20 @@ Section COMMON.
       :
       is_obs arg (trigger (Syscall fn varg rvs) >>= ktr).
 
+  Variant event_step {X: Type} (x: X) (r: ITR -> Prop): ITR -> Prop :=
+    | event_step_intro
+        (e: E X) ktr
+        (REL: r (ktr x))
+      :
+      event_step x r (trigger e >>= ktr)
+  .
+
+  Variant is_event {X: Type} (e: E X): ITR -> Prop :=
+    | is_event_intro
+        ktr
+      :
+      is_event e (trigger e >>= ktr).
+
   Variant is_ret (rv: R): ITR -> Prop :=
     | is_ret_intro: is_ret rv (Ret rv).
 
@@ -45,16 +60,22 @@ Section COMMON.
         (MON: forall itr, (r0 itr) -> (r1 itr))
     :
     (obs_step args r0 itr) -> (obs_step args r1 itr).
-  Proof.
-    i. inv H. econs; eauto.
-  Qed.
+  Proof. i. inv H. econs; eauto. Qed.
+
+  Lemma event_step_mon
+        X (x: X) (r0 r1: ITR -> Prop) itr
+        (MON: forall itr, (r0 itr) -> (r1 itr))
+    :
+    (event_step x r0 itr) -> (event_step x r1 itr).
+  Proof. i. inv H. econs; eauto. Qed.
 
 End COMMON.
 
 Section SRCSTEPS.
 
+  Variable E: Type -> Type.
   Variable R: Type.
-  Let ITR := (itree eventE R).
+  Let ITR := (itree (E +' eventE) R).
   Let ARGS := (option (string * Any.t * (Any.t -> Prop) * Any.t)).
 
   (* src tau step *)
@@ -109,12 +130,6 @@ Section SRCSTEPS.
   Definition src_plus (r: ARGS -> ITR -> Prop): ITR -> Prop :=
     (src_step (fun args ktr => src_star r args ktr))
   .
-
-  (* Definition src_plus (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop): *)
-  (*   ITR -> Prop := (st_star (fun ktr => src_step r ktr)) *)
-  (* . *)
-
-  (* Definition st_plus (r: ITR -> Prop): ITR -> Prop := src_plus (fun args ktr => (args = None) /\ (r ktr)). *)
 
   (* properties *)
   Lemma st_step_mon
@@ -216,8 +231,9 @@ End SRCSTEPS.
 
 Section TGTSTEPS.
 
+  Variable E: Type -> Type.
   Variable R: Type.
-  Let ITR := (itree eventE R).
+  Let ITR := (itree (E +' eventE) R).
   Let ARGS := (option (string * Any.t * (Any.t -> Prop) * Any.t)).
 
   (* tgt tau step *)
@@ -272,12 +288,6 @@ Section TGTSTEPS.
   Definition tgt_plus (r: ARGS -> ITR -> Prop): ITR -> Prop :=
     (tgt_step (fun args ktr => tgt_star r args ktr))
   .
-
-  (* Definition tgt_plus (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop): *)
-  (*   ITR -> Prop := (tt_star (fun ktr => tgt_step r ktr)) *)
-  (* . *)
-
-  (* Definition tt_plus (r: ITR -> Prop): ITR -> Prop := tgt_plus (fun args ktr => (args = None) /\ (r ktr)). *)
 
   (* properties *)
   Lemma tt_step_mon
@@ -379,17 +389,22 @@ End TGTSTEPS.
 
 Section EXP_SIM.
 
+  Variable E: Type -> Type.
   Variable wfo: WF.
 
   Definition _simg_alt_exp
-             (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-             {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+             (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
+             {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop :=
     fun itr_src itr_tgt =>
       (exists rs rt, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
       \/
         (exists arg,
             ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
               (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+      \/
+        (exists X (e: E X),
+            ((is_event e itr_src) /\ (is_event e itr_tgt)) /\
+              (forall (xs xt: X) (EQ: xs = xt), (<<EVE: event_step xt (fun ktr_tgt => event_step xs (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (
           (<<TGT: (tt_step (fun ktr_tgt =>
@@ -404,15 +419,18 @@ Section EXP_SIM.
         )
   .
 
-  Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco6 _simg_alt_exp bot6.
+  Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := paco6 _simg_alt_exp bot6.
 
   Lemma simg_alt_exp_mon: monotone6 _simg_alt_exp.
   Proof.
     ii. inv IN.
     { left. eauto. }
-    right. des; [left | right; left | right; right].
+    right. des; [left | right; left | do 2 right; left | do 2 right; right].
     { exists arg. splits; auto. i. specialize (H0 _ _ EQ). eapply obs_step_mon; [|eauto]. i; ss.
       eapply obs_step_mon; [|eauto]. i; ss. des; eauto.
+    }    
+    { exists X, e. splits; auto. i. specialize (H0 _ _ EQ). eapply event_step_mon; [|eauto]. i; ss.
+      eapply event_step_mon; [|eauto]. i; ss. des; eauto.
     }    
     { eapply tt_step_mon. 2: eauto. i; ss. des; [left | right].
       - eapply st_step_mon. 2: eauto. i; ss. des; eauto.
@@ -435,10 +453,12 @@ Hint Resolve cpn6_wcompat: paco.
 
 Section IMP_SIM.
 
+  Variable E: Type -> Type.
+
   Inductive _simg_alt_imp
-            (simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop)
+            (simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
             {R0 R1} (RR: R0 -> R1 -> Prop)
-            (itr_src: itree eventE R0) (itr_tgt: itree eventE R1): Prop :=
+            (itr_src: itree (E +' eventE) R0) (itr_tgt: itree (E +' eventE) R1): Prop :=
   | simg_alt_imp_intro
       (SIM:
         (exists rs rt, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>))
@@ -446,6 +466,10 @@ Section IMP_SIM.
           (exists arg,
               ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
                 (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+        \/
+          (exists X (e: E X),
+              ((is_event e itr_src) /\ (is_event e itr_tgt)) /\
+                (forall (xs xt: X) (EQ: xs = xt), (<<EVE: event_step xt (fun ktr_tgt => event_step xs (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
         \/
           (
             (<<TGT: (tt_step (fun ktr_tgt =>
@@ -461,9 +485,9 @@ Section IMP_SIM.
   .
 
   Lemma _simg_alt_imp_ind2
-        (r: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop)
+        (r: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
         R0 R1 (RR: R0 -> R1 -> Prop)
-        (P: (itree eventE R0) -> (itree eventE R1) -> Prop)
+        (P: (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
         (RET: forall
             itr_src itr_tgt rs rt
             (TGT: is_ret rt itr_tgt)
@@ -476,6 +500,13 @@ Section IMP_SIM.
             (TGT: is_obs arg itr_tgt)
             (SIM: forall rs rt (EQ: rs = rt),
                 obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            P itr_src itr_tgt)
+        (EVE: forall
+            X (e: E X) itr_src itr_tgt
+            (SRC: is_event e itr_src)
+            (TGT: is_event e itr_tgt)
+            (SIM: forall (xs xt: X) (EQ: xs = xt),
+                event_step xt (fun ktr_tgt => event_step xs (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
             P itr_src itr_tgt)
         (TGT: forall
             itr_src itr_tgt
@@ -493,6 +524,7 @@ Section IMP_SIM.
     fix IH 3. i. inv SIM. des.
     { eapply RET; eauto. }
     { eapply OBS; eauto. }
+    { eapply EVE; eauto. }
     { eapply TGT; eauto. inv TGT0.
       - econs 1. des; [left|right]; eauto.
       - econs 2. i. specialize (REL x). des; [left|right]; eauto.
@@ -505,7 +537,7 @@ Section IMP_SIM.
     }
   Qed.
 
-  Definition simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop := paco5 _simg_alt_imp bot5.
+  Definition simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := paco5 _simg_alt_imp bot5.
 
   Lemma simg_alt_imp_mon: monotone5 _simg_alt_imp.
   Proof.
@@ -514,10 +546,13 @@ Section IMP_SIM.
     { econs. right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs. do 2 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
+    { econs. do 2 right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+      eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss. auto.
+    }
+    { econs. do 3 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
       eapply st_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs. do 2 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
+    { econs. do 3 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
       eapply tt_step_mon; [|eauto]. i; ss. auto.
     }
   Qed.
@@ -526,8 +561,8 @@ Section IMP_SIM.
 
 
   Variant simg_alt_imp_indC
-          (simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree eventE R0) -> (itree eventE R1) -> Prop)
-          {R0 R1} (RR: R0 -> R1 -> Prop): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+          (simg_alt_imp: forall R0 R1 (RR: R0 -> R1 -> Prop), (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop :=
     | simg_alt_imp_indC_ret
         itr_src itr_tgt rs rt
         (TGT: is_ret rt itr_tgt)
@@ -541,6 +576,14 @@ Section IMP_SIM.
         (TGT: is_obs arg itr_tgt)
         (SIM: forall rs rt (EQ: rs = rt),
             obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
+      :
+      simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
+    | simg_alt_imp_indC_event
+        X (e: E X) itr_src itr_tgt
+        (SRC: is_event e itr_src)
+        (TGT: is_event e itr_tgt)
+        (SIM: forall (xs xt: X) (EQ: xs = xt),
+            event_step xt (fun ktr_tgt => event_step xs (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
       :
       simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
     | simg_alt_imp_indC_tgt
@@ -562,10 +605,13 @@ Section IMP_SIM.
     { econs 2; eauto. i. specialize (SIM _ _ EQ).
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs 3; eauto. eapply tt_step_mon; [|eauto]. i; ss. des; eauto. left.
+    { econs 3; eauto. i. specialize (SIM _ _ EQ).
+      eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss. auto.
+    }
+    { econs 4; eauto. eapply tt_step_mon; [|eauto]. i; ss. des; eauto. left.
       eapply st_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs 4; eauto. eapply st_step_mon; [|eauto]. i; ss. des; eauto. left.
+    { econs 5; eauto. eapply st_step_mon; [|eauto]. i; ss. des; eauto. left.
       eapply tt_step_mon; [|eauto]. i; ss. auto.
     }
   Qed.
@@ -581,18 +627,22 @@ Section IMP_SIM.
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
       apply rclo5_base. auto.
     }
-    { econs. do 2 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right].
+    { econs. do 2 right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+      eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss.
+      apply rclo5_base. auto.
+    }
+    { econs. do 3 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right].
       - eapply st_step_mon; [|eauto]. i; ss. apply rclo5_base. auto.
       - eapply simg_alt_imp_mon; eauto. i. apply rclo5_base; auto.
     }
-    { econs. do 2 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right].
+    { econs. do 3 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right].
       - eapply tt_step_mon; [|eauto]. i; ss. apply rclo5_base. auto.
       - eapply simg_alt_imp_mon; eauto. i. apply rclo5_base; auto.
     }
   Qed.
 
   Lemma simg_alt_imp_ind R0 R1 (RR: R0 -> R1 -> Prop)
-        (P: (itree eventE R0) -> (itree eventE R1) -> Prop)
+        (P: (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop)
         (RET: forall
             itr_src itr_tgt rs rt
             (TGT: is_ret rt itr_tgt)
@@ -605,6 +655,13 @@ Section IMP_SIM.
             (TGT: is_obs arg itr_tgt)
             (SIM: forall rs rt (EQ: rs = rt),
                 obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            P itr_src itr_tgt)
+        (EVE: forall
+            X (e: E X) itr_src itr_tgt
+            (SRC: is_event e itr_src)
+            (TGT: is_event e itr_tgt)
+            (SIM: forall (xs xt: X) (EQ: xs = xt),
+                event_step xt (fun ktr_tgt => event_step xs (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
             P itr_src itr_tgt)
         (TGT: forall
             itr_src itr_tgt
@@ -623,6 +680,10 @@ Section IMP_SIM.
     { eapply RET; eauto. }
     { eapply OBS; eauto. i. specialize (SIM _ _ EQ).
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
+      pclearbot. eauto.
+    }
+    { eapply EVE; eauto. i. specialize (SIM _ _ EQ).
+      eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss.
       pclearbot. eauto.
     }
     { eapply TGT; eauto.
@@ -650,8 +711,8 @@ Hint Resolve cpn5_wcompat: paco.
 (*   Variable wfo: WF. *)
 
 (*   Definition _simg_alt_exp *)
-(*              (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop) *)
-(*              {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop := *)
+(*              (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop) *)
+(*              {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := *)
 (*     fun itr_src itr_tgt => *)
 (*       (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>)) *)
 (*       \/ *)
@@ -668,7 +729,7 @@ Hint Resolve cpn5_wcompat: paco.
 (*         ) *)
 (*   . *)
 
-(*   Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco6 _simg_alt_exp bot6. *)
+(*   Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := paco6 _simg_alt_exp bot6. *)
 
 (*   Lemma simg_alt_exp_mon: monotone6 _simg_alt_exp. *)
 (*   Proof. *)
@@ -700,8 +761,8 @@ Hint Resolve cpn5_wcompat: paco.
 (*   Variable wfo: WF. *)
 
 (*   Definition _simg_alt_exp *)
-(*              (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop) *)
-(*              {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree eventE R0) -> (itree eventE R1) -> Prop := *)
+(*              (simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop) *)
+(*              {R0 R1} (RR: R0 -> R1 -> Prop) (exp: wfo.(T)): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := *)
 (*     fun itr_src itr_tgt => *)
 (*       (exists rt rs, (<<TGT: is_ret rt itr_tgt>>) /\ (<<SRC: is_ret rs itr_src>>) /\ (<<RET: RR rs rt>>)) *)
 (*       \/ *)
@@ -715,7 +776,7 @@ Hint Resolve cpn5_wcompat: paco.
 (*         ) *)
 (*   . *)
 
-(*   Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco6 _simg_alt_exp bot6. *)
+(*   Definition simg_alt_exp: forall R0 R1 (RR: R0 -> R1 -> Prop), wfo.(T) -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := paco6 _simg_alt_exp bot6. *)
 
 (*   Lemma simg_alt_exp_mon: monotone6 _simg_alt_exp. *)
 (*   Proof. *)

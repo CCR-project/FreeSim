@@ -19,6 +19,8 @@ Set Implicit Arguments.
 
 Section PROOF.
 
+  Variable E: Type -> Type.
+
   Definition RR_top {R0 R1} (RRp: Ord.t -> Ord.t -> R0 -> R1 -> Prop) (RR: R0 -> R1 -> Prop) :=
     forall o0 o1 r0 r1, (RRp o0 o1 r0 r1) -> (RR r0 r1).
 
@@ -29,17 +31,17 @@ Section PROOF.
         (RRp: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
         (RR: R0 -> R1 -> Prop)
         (TOP: RR_top RRp RR)
-        (itr_src: itree eventE R0)
-        (itr_tgt: itree eventE R1)
+        (itr_src: itree (E +' eventE) R0)
+        (itr_tgt: itree (E +' eventE) R1)
         (f_src f_tgt: Ord.t)
-        (g_src g_tgt: (@ord_tree_WF ((itree eventE R0) * (itree eventE R1))).(T))
-        (GEN: gen_exp (@ord_tree_WF ((itree eventE R0) * (itree eventE R1)))
+        (g_src g_tgt: (@ord_tree_WF ((itree (E +' eventE) R0) * (itree (E +' eventE) R1))).(T))
+        (GEN: gen_exp (@ord_tree_WF ((itree (E +' eventE) R0) * (itree (E +' eventE) R1)))
                       RRp f_src f_tgt (g_src) (itr_src) (g_tgt) (itr_tgt))
     :
     exists wf_exp e_src e_tgt,
       simg_exp wf_exp RR e_src e_tgt itr_src itr_tgt.
   Proof.
-    set (wf_gen:= (@ord_tree_WF ((itree eventE R0) * (itree eventE R1)))).
+    set (wf_gen:= (@ord_tree_WF ((itree (E +' eventE) R0) * (itree (E +' eventE) R1)))).
     exists (prod_WF Ord_WF wf_gen). exists (f_tgt, g_src), (f_src, g_tgt).
     ginit. revert_until TOP.
     gcofix CIH. i. move f_src before CIH. revert_until f_src.
@@ -66,6 +68,8 @@ Section PROOF.
       { right. econs 1. auto. }
       { right. econs 1. auto. }
     }
+    { gstep. econs 9. i. specialize (GEN x_src x_tgt EQ).
+      gfinal. left. eapply CIH. eapply GEN. }
   Qed.
 
 
@@ -75,8 +79,8 @@ Section PROOF.
           (RRp: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
           (RR: R0 -> R1 -> Prop)
           (TOP: RR_top RRp RR)
-          (itr_src: itree eventE R0)
-          (itr_tgt: itree eventE R1)
+          (itr_src: itree (E +' eventE) R0)
+          (itr_tgt: itree (E +' eventE) R1)
           (f_src f_tgt: Ord.t)
           (SIM: simg RRp f_src f_tgt (itr_src) (itr_tgt))
     :
