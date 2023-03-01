@@ -1298,16 +1298,12 @@ Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
 
 Require Import SimSTSIndex.
 
-Theorem adequacy_global_itree itr_src itr_tgt o_src0 o_tgt0
+Theorem adequacy_global_itree_aux itr_src itr_tgt o_src0 o_tgt0
         (SIM: simg (E:=E) (fun _ _ => eq) o_src0 o_tgt0 itr_src itr_tgt)
   :
-    Beh.of_program (@ModSemL.compile_itree CONFT (initialize itr_tgt))
-    <1=
-    Beh.of_program (@ModSemL.compile_itree CONFS (initialize itr_src)).
+  sim (@ModSemL.compile_itree CONFS (initialize itr_src))
+    (@ModSemL.compile_itree CONFT (initialize itr_tgt)) o_src0 o_tgt0 (initialize itr_src) (initialize itr_tgt).
 Proof.
-  unfold Beh.of_program. ss.
-  i. eapply adequacy_aux; et.
-  instantiate (1:=o_tgt0). instantiate (1:=o_src0). clear x0 PR.
   generalize itr_tgt at 1 as md_tgt.
   generalize itr_src at 1 as md_src. i. ginit.
   revert o_src0 o_tgt0 itr_src itr_tgt SIM. gcofix CIH.
@@ -1355,6 +1351,16 @@ Proof.
   { guclo sim_indC_spec. eapply sim_indC_angelic_src; ss. i.
     eapply step_trigger_take_iff in STEP. des. clarify.
   }
+Qed.
+
+Theorem adequacy_global_itree itr_src itr_tgt o_src0 o_tgt0
+        (SIM: simg (E:=E) (fun _ _ => eq) o_src0 o_tgt0 itr_src itr_tgt)
+  :
+    Beh.of_program (@ModSemL.compile_itree CONFT (initialize itr_tgt))
+    <1=
+    Beh.of_program (@ModSemL.compile_itree CONFS (initialize itr_src)).
+Proof.
+  unfold Beh.of_program. ss. i. eapply adequacy_aux; et. eapply adequacy_global_itree_aux; et.
 Qed.
 
 
