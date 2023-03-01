@@ -67,6 +67,23 @@ Proof.
       { eapply Ord.S_lt. }
 Qed.
 
+Theorem simg_postcond_mono: forall (R0 R1: Type) Q0 Q1 (IMPL: Q0 <4= Q1),
+    simg (E:=E) (R0:=R0) (R1:=R1) Q0 <4= simg Q1.
+Proof.
+  ginit. gcofix CIH.
+  i. punfold PR. induction PR using _simg_ind2.
+  - gstep. econs; eauto.
+  - gstep. econs; eauto. i. subst. specialize (SIM x_tgt x_tgt eq_refl). pclearbot. gfinal. eauto.
+  - guclo simg_indC_spec.
+  - guclo simg_indC_spec.
+  - des. guclo simg_indC_spec.
+  - guclo simg_indC_spec. econs; eauto. i. eapply SIM.
+  - guclo simg_indC_spec. econs; eauto. i. eapply SIM.
+  - des. guclo simg_indC_spec.
+  - gstep. econs; eauto. pclearbot. gbase. eapply CIH; et.
+  - gstep. econsr; eauto. i. subst. specialize (SIM x_tgt x_tgt eq_refl). pclearbot. gfinal. eauto.
+Qed.
+
 (* Definition postcond_mon {R0 R1: Type} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop): Prop := *)
 (*   forall f_src0 f_src1 f_tgt0 f_tgt1 r_src r_tgt *)
 (*          (LE: (f_src0 <= f_src1)%ord) (LE: (f_tgt0 <= f_tgt1)%ord), *)
