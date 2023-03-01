@@ -367,6 +367,16 @@ Goal forall E X Y (itr: itree E X) (ktr: X -> itree E Y), ((x <- itr;; tau;; tau
   i. progress grind. (*** it should progress ***)
 Abort.
 
+Lemma unfold_iter :
+forall {E : Type -> Type} {A B : Type} (f : A -> itree E (A + B)) (x : A),
+ITree.iter f x = ` lr : A + B <- f x;; match lr with
+                                       | inl l => tau;; ITree.iter f l
+                                       | inr r => Ret r
+                                       end.
+Proof.
+  i. f. eapply unfold_iter.
+Qed.
+
 
 
 

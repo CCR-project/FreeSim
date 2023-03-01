@@ -1387,6 +1387,52 @@ Hint Constructors bindR: core.
 Hint Unfold bindC: core.
 
 
+
+From ITree Require Import HeterogeneousRelations.
+
+Section ITER.
+
+  (***
+Note: by simg_bot_flag_up, it doesn't matter which ordinal number we choose here. We just pick 0.
+If we want to give rules for open terms (gpaco7/paco7), the ordinal numbers matter there.
+But this is beyond the scope of previous works (ITrees).
+   ***)
+
+  (* in the style of eutt_iter' *)
+  Theorem simg_iter': forall {E I1 I2 R1 R2} (RI: I1 -> I2 -> Prop) (RR: R1 -> R2 -> Prop)
+                             (ksrc: I1 -> itree (E +' eventE) (I1 + R1)) (ktgt: I2 -> itree (E +' eventE) (I2 + R2)),
+      (forall i1 i2, RI i1 i2 -> simg (fun _ _ => sum_rel RI RR) 0%ord 0%ord (ksrc i1) (ktgt i2)) ->
+      (forall i1 i2, RI i1 i2 -> simg (fun _ _ => RR) 0%ord 0%ord ((ITree.iter ksrc) i1) ((ITree.iter ktgt) i2)).
+  Proof.
+    i. ginit. revert_until RR.
+    gcofix CIH.
+    i. rewrite ! unfold_iter.
+    guclo bindC_spec. econs.
+    { gfinal. right. repeat spc H0. eapply paco7_mon; eauto. ii; ss. }
+    i. ss. inv SIM.
+    - guclo simg_indC_spec. econs; eauto.
+      guclo simg_indC_spec. econs; eauto.
+      gstep. econsr; eauto.
+      2: { instantiate (1:=1%ord). instantiate (1:=0%ord). eapply OrdArith.lt_from_nat. lia. }
+      2: { instantiate (1:=1%ord). instantiate (1:=0%ord). eapply OrdArith.lt_from_nat. lia. }
+      gbase. eapply CIH; eauto.
+    - gstep. econs; eauto; refl.
+  Qed.
+
+  Let simg {E R}: relation (itree (E +' eventE) R) := simg (fun _ _ => eq) 0%ord 0%ord.
+
+  (* in the style of eutt_iter *)
+  #[global] Instance simg_iter {E A B} :
+    @Proper ((A -> itree (E +' eventE) (A + B)) -> A -> itree (E +' eventE) B)
+      ((eq ==> simg) ==> (eq ==> simg))
+      ITree.iter.
+  ii. subst. eapply simg_iter' with (RI:=eq); ss. i. subst. r in H. specialize (H i2 i2 eq_refl). r in H.
+  rp; et. extensionalities o0 o1 i0 i1. eapply prop_ext. split; i; eapply sum_rel_eq; ss.
+  Defined.
+
+End ITER.
+
+
 (* Variant _simg_safe *)
 (*           (simg: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop) *)
 (*           {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := *)
