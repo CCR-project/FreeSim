@@ -40,11 +40,7 @@ Next Obligation.
   ii. eapply simg_trans; eauto.
 Qed.
 
-(* Global Program Instance eutt_simg {E R}: @subrelation (dtree E R) (eutt eq) ((⪸)). *)
-(* Next Obligation. *)
-(*   eapply eutt_simg. ss. *)
-(* Qed. *)
-Global Program Instance eutt_simg_2 {E R}: Proper ((eutt eq) ==> (@eutt (E +' eventE) R R eq) ==> impl) ((⪸)).
+Global Program Instance eutt_simg {E R}: Proper ((eutt eq) ==> (@eutt (E +' eventE) R R eq) ==> impl) ((⪸)).
 Next Obligation.
   ii. etrans; et. { sym in H. eapply SimGlobalIndexFacts.eutt_simg; et. }
   etrans; et. eapply SimGlobalIndexFacts.eutt_simg. ss.
@@ -83,9 +79,24 @@ Proof.
   i. ginit. guclo simg_indC_spec. econs; eauto. des. esplits; eauto with paco.
 Qed.
 
-Global Program Instance simg_dualize_2 {E R}: Proper ((⪸) ==> (flip simg)) (@dualize E R).
+Global Program Instance simg_dualize {E R}: Proper ((⪸) ==> (flip simg)) (@dualize E R).
 Next Obligation.
   ii. eapply simg_dualize; ss. eapply simg_postcond_mono; et. ss.
+Qed.
+
+Global Program Instance dualize_simg {E R}: Proper ((fun x y => dualize y ⪸ dualize x) ==> simg) (@id (dtree E R)).
+Next Obligation.
+  ii. unfold id. eapply dualize_simg. eapply simg_postcond_mono; et. ss.
+Qed.
+
+Lemma dualize_ang E X: dualize (trigger (Take X): itree (E +' eventE) X) ≈ (trigger (Choose X)).
+Proof.
+  unfold dualize. rewrite interp_trigger. cbn. rewrite ! bind_trigger. f_equiv. ii. rewrite tau_eutt; refl.
+Qed.
+
+Lemma dualize_dem E X: dualize (trigger (Choose X): itree (E +' eventE) X) ≈ (trigger (Take X)).
+Proof.
+  unfold dualize. rewrite interp_trigger. cbn. rewrite ! bind_trigger. f_equiv. ii. rewrite tau_eutt; refl.
 Qed.
 
 
@@ -364,23 +375,9 @@ End INTRODUCTION.
 Section MORE.
 Variable E: Type -> Type.
 
-(** The generic [rec] interface of the library's [Interp] module can
-    be used to define a single recursive function.  The more general
-    [mrec] (from which [rec] is defined) allows multiple, mutually
-    recursive definitions.
-
-    The argument of [rec] is an interaction tree with an event type
-    [callE A B] to represent "recursive calls", with input [A]
-    and output [B]. The function [call : A -> itree _ B] can be used
-    to make such calls.
-
-    In this case, since [factorial : nat -> nat], we use
-    [callE nat nat].
- *)
-
-Definition demonic_spin: dtree E unit := ITree.iter (fun _ => trigger (Choose unit);;; Ret (inl tt)) tt.
-Definition angelic_spin: dtree E unit := ITree.iter (fun _ => trigger (Take unit);;; Ret (inl tt)) tt.
-Definition tau_spin: dtree E unit := ITree.iter (fun _ => tau;; Ret (inl tt)) tt.
+Example demonic_spin: dtree E unit := ITree.iter (fun _ => trigger (Choose unit);;; Ret (inl tt)) tt.
+Example angelic_spin: dtree E unit := ITree.iter (fun _ => trigger (Take unit);;; Ret (inl tt)) tt.
+Example tau_spin: dtree E unit := ITree.iter (fun _ => tau;; Ret (inl tt)) tt.
 
 Theorem tau_spin_angelic_spin: tau_spin ⪸ angelic_spin.
 Proof.
@@ -411,11 +408,12 @@ Proof.
   f_equiv; try refl. ii. grind. rewrite tau_eutt. refl.
 Qed.
 
+(*** proof by duality ***)
 Corollary tau_spin_demonic_spin: tau_spin ⪸ demonic_spin.
 Proof.
   rewrite <- dualize_involution with (d:=tau_spin).
   rewrite <- demonic_angelic_dual.
-  eapply simg_dualize_2.
+  eapply simg_dualize.
   rewrite tau_spin_dual.
   eapply tau_spin_angelic_spin_rev.
 Qed.
@@ -424,9 +422,61 @@ Corollary tau_spin_demonic_spin_rev: demonic_spin ⪸ tau_spin.
 Proof.
   rewrite <- dualize_involution with (d:=tau_spin).
   rewrite <- demonic_angelic_dual.
-  eapply simg_dualize_2.
+  eapply simg_dualize.
   rewrite tau_spin_dual.
   eapply tau_spin_angelic_spin.
+Qed.
+
+(*** examples from CTrees ***)
+Remark demonic_comm X Y R (k: X -> Y -> dtree E R):
+  (x <- trigger (Choose X);; y <- trigger (Choose Y);; k x y) ⪸ (y <- trigger (Choose Y);; x <- trigger (Choose X);; k x y).
+Proof.
+  eapply simg_dem_tgt. i.
+  eapply simg_dem_tgt. i.
+  eapply simg_dem_src. eexists.
+  eapply simg_dem_src. eexists.
+  refl.
+Qed.
+
+Remark demonic_merge X Y R (k: X -> Y -> dtree E R):
+  ('(x, y) <- trigger (Choose (X * Y));; k x y) ⪸ (x <- trigger (Choose X);; y <- trigger (Choose Y);; k x y).
+Proof.
+  eapply simg_dem_tgt. i.
+  eapply simg_dem_tgt. i.
+  eapply simg_dem_src. eexists (_, _).
+  refl.
+Qed.
+
+Remark demonic_merge_rev X Y R (k: X -> Y -> dtree E R):
+  (x <- trigger (Choose X);; y <- trigger (Choose Y);; k x y) ⪸ ('(x, y) <- trigger (Choose (X * Y));; k x y).
+Proof.
+  eapply simg_dem_tgt. i. destruct x.
+  eapply simg_dem_src. eexists.
+  eapply simg_dem_src. eexists.
+  refl.
+Qed.
+
+(*** proof by duality ***)
+Opaque ITree.bind.
+Corollary angelic_comm X Y R (k: X -> Y -> dtree E R):
+  (x <- trigger (Take X);; y <- trigger (Take Y);; k x y) ⪸ (y <- trigger (Take Y);; x <- trigger (Take X);; k x y).
+Proof.
+  eapply dualize_simg. rewrite ! dualize_bind. rewrite ! dualize_ang. setoid_rewrite dualize_bind. setoid_rewrite dualize_ang.
+  eapply demonic_comm.
+Qed.
+
+Corollary angelic_merge X Y R (k: X -> Y -> dtree E R):
+  (x <- trigger (Take X);; y <- trigger (Take Y);; k x y) ⪸ ('(x, y) <- trigger (Take (X * Y));; k x y).
+Proof.
+  eapply dualize_simg. rewrite ! dualize_bind. rewrite ! dualize_ang. setoid_rewrite dualize_bind. setoid_rewrite dualize_ang.
+  rewrite <- demonic_merge. f_equiv. ii. subst. destruct y. refl.
+Qed.
+
+Corollary angelic_merge_rev X Y R (k: X -> Y -> dtree E R):
+  ('(x, y) <- trigger (Take (X * Y));; k x y) ⪸ (x <- trigger (Take X);; y <- trigger (Take Y);; k x y).
+Proof.
+  eapply dualize_simg. rewrite ! dualize_bind. rewrite ! dualize_ang. setoid_rewrite dualize_bind. setoid_rewrite dualize_ang.
+  rewrite demonic_merge_rev. f_equiv. ii. subst. destruct y. refl.
 Qed.
 
 End MORE.
