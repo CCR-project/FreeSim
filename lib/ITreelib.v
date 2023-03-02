@@ -377,6 +377,12 @@ Proof.
   i. f. eapply unfold_iter.
 Qed.
 
+Lemma interp_iter':
+  forall {E F : Type -> Type} (f : forall T : Type, E T -> itree F T) {I A : Type} (t : I -> itree E (I + A))
+    (t' : I -> itree F (I + A)),
+  (forall i : I, interp f (t i) = t' i) -> forall i : I, interp f (ITree.iter t i) = ITree.iter t' i.
+Proof. i. f. eapply interp_iter'. i. f. ss. Qed.
+
 
 
 
