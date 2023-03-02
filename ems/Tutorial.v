@@ -22,8 +22,6 @@ Set Implicit Arguments.
 (**************************************************************************************************)
 (**************************************************************************************************)
 (**************************************************************************************************)
-Lemma itree_eta : forall {E : Type -> Type} {R : Type} (t : itree E R), t = {| _observe := observe t |}.
-Proof. i. f. eapply itree_eta. Qed.
 
 Definition dtree E R := (itree (E +' eventE) R).
 
@@ -122,7 +120,7 @@ Ltac tau_steps_left := repeat (force_left; rewrite tau_eutt); force_left.
 Ltac tau_steps_right := repeat (force_right; rewrite tau_eutt); force_right.
 Ltac tau_steps := tau_steps_left; tau_steps_right.
 
-Section INTRODUCTION.
+Section ITREES_TUTORIAL.
 Variable F: Type -> Type.
 Let E := F +' eventE.
 
@@ -368,11 +366,18 @@ Proof.
     rewrite bind_ret_l. rewrite interp_ret.
     reflexivity.
 Qed. (* /ADMITTED *)
-End INTRODUCTION.
+End ITREES_TUTORIAL.
 
 
+(**************************************************************************************************)
+(**************************************************************************************************)
+(**************************************************************************************************)
+(************************ More examples on DTrees (borrowed from CTrees) **************************)
+(**************************************************************************************************)
+(**************************************************************************************************)
+(**************************************************************************************************)
 
-Section MORE.
+Section EXAMPLES_CTREES.
 Variable E: Type -> Type.
 
 Example demonic_spin: dtree E unit := ITree.iter (fun _ => trigger (Choose unit);;; Ret (inl tt)) tt.
@@ -398,7 +403,7 @@ Qed.
 Lemma tau_spin_dual: dualize tau_spin ≈ tau_spin.
 Proof.
   unfold tau_spin. rewrite dualize_iter. eapply eutt_iter; ss. ii.
-  unfold dualize. rewrite interp_tau. rewrite ! tau_eutt. rewrite interp_ret. refl.
+  rewrite dualize_tau. rewrite ! tau_eutt. rewrite dualize_ret. refl.
 Qed.
 
 Lemma demonic_angelic_dual: dualize angelic_spin ≈ demonic_spin.
@@ -479,4 +484,4 @@ Proof.
   rewrite demonic_merge_rev. f_equiv. ii. subst. destruct y. refl.
 Qed.
 
-End MORE.
+End EXAMPLES_CTREES.

@@ -596,3 +596,6 @@ Proof.
   erewrite (itree_eta_ itr1).
   f_equal. auto.
 Qed.
+
+Lemma itree_eta : forall {E : Type -> Type} {R : Type} (t : itree E R), t = {| _observe := observe t |}.
+Proof. i. f. eapply itree_eta. Qed.
