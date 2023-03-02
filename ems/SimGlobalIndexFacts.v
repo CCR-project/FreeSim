@@ -379,9 +379,10 @@ Qed.
 
 Section EUTT.
 
-Theorem eutt_simg: forall R RR (u t: itree (E +' eventE) R) (EUTT: eqit RR true true u t), simg (fun _ _ => RR) 0%ord 0%ord u t.
+Theorem eutt_simg: forall R0 R1 RR (u: itree (E +' eventE) R0) (t: itree (E +' eventE) R1) (EUTT: eqit RR true true u t),
+    simg (fun _ _ => RR) 0%ord 0%ord u t.
 Proof.
-  i. ginit. revert_until R. gcofix CIH. i.
+  i. ginit. revert_until R1. gcofix CIH. i.
   punfold EUTT. red in EUTT.
   dependent induction EUTT; try apply simpobs in x; try apply simpobs in x0; try f in x; try f in x0; subst.
   - gstep; econs. 3: eauto. all: refl.
@@ -1108,22 +1109,22 @@ Section DUAL.
       end
   .
   Definition dualize R (d: itree (E +' eventE) R): itree (E +' eventE) R := interp (case_ trivial_Handler dualizer) d.
-  Theorem dualize_involution R (d: itree (E +' eventE) R): dualize (dualize d) ≈ d.
+  Theorem dualize_involution R (d: itree (E +' eventE) R): dualize (dualize d) ≳ d.
   Proof.
     unfold dualize. rewrite interp_interp. etrans.
-    eapply eutt_interp; try refl.
+    eapply euttge_interp; try refl.
     2: { rewrite interp_id_h; refl. }
     ii. unfold id_, Id_Handler, Handler.id_. cbn.
     destruct a.
     - cbn. unfold trivial_Handler. rewrite interp_trigger. cbn. rewrite bind_trigger.
-      unfold trigger. f_equiv. ii. rewrite tau_eutt. refl.
+      unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
     - cbn. destruct e; cbn.
       + rewrite interp_trigger. cbn. rewrite bind_trigger.
-        unfold trigger. f_equiv. ii. rewrite tau_eutt. refl.
+        unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
       + rewrite interp_trigger. cbn. rewrite bind_trigger.
-        unfold trigger. f_equiv. ii. rewrite tau_eutt. refl.
+        unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
       + rewrite interp_trigger. cbn. rewrite bind_trigger.
-        unfold trigger. f_equiv. ii. rewrite tau_eutt. refl.
+        unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
   Qed.
 
   Theorem dualize_iter {R I} (body: I -> itree (E +' eventE) (I + R)) i:
@@ -1199,110 +1200,135 @@ Section DUAL.
     all: ss.
   Qed.
 
-  (* CoFixpoint dualize (R: Type) (itr: itree (E +' eventE) R): itree (E +' eventE) R := *)
-  (*   match (observe itr) with *)
-  (*   | RetF r => Ret r *)
-  (*   | TauF ktr => tau;; (dualize ktr) *)
-  (*   | @VisF _ _ _ _ (inl1 e) ktr => *)
-  (*       Vis (@inl1 _ _ _ e) (fun x => dualize (ktr x)) *)
-  (*   | @VisF _ _ _ X (inr1 e) ktr => *)
-  (*       Vis (inr1 (match e in (eventE T) return (eventE T) with *)
-  (*            | @Choose X0 => @Take X0 *)
-  (*            | @Take X0 => @Choose X0 *)
-  (*            | Syscall fn varg rvs => (Syscall fn varg rvs) *)
-  (*            end)) (fun x => dualize (ktr x)) *)
-  (*   end. *)
+  (** Indeed, we can strengthen below so that RR can relate "Ord.t"s too. That would require manual coinduction again? **)
+  (** Anyhow, such an additional power is not interesting here; it is only useful when using upto-bind, otherwise useless. **)
+  Corollary dualize_simg
+          R0 R1 (RR: R0 -> R1 -> Prop)
+          (itr0: itree (E +' eventE) R0)
+          (itr1: itree (E +' eventE) R1)
+          f_src f_tgt
+          (SIM: simg (fun _ _ => RR) f_src f_tgt (dualize itr0) (dualize itr1))
+    :
+    simg (fun _ _ => flip RR) f_tgt f_src (itr1) (itr0).
+  Proof.
+    apply simg_dualize in SIM.
+    eapply simg_postcond_mono; cycle 1.
+    { eapply simg_trans_aux.
+      { eapply simg_bot_flag_up. eapply eutt_simg. sym. eapply euttge_sub_eutt. eapply dualize_involution. }
+      eapply simg_trans_aux; eauto.
+      { eapply simg_bot_flag_up. eapply eutt_simg. eapply euttge_sub_eutt. eapply dualize_involution. }
+    }
+    ss. ii. des. clarify.
+  Unshelve.
+    all: ss.
+  Qed.
 
-  (* Lemma observe_dualize  *)
-  (*       R (itr: itree (E +' eventE) R) *)
-  (*   : *)
-  (*   observe (dualize itr) =  *)
-  (*     match (observe itr) with *)
-  (*     | RetF r => RetF r *)
-  (*     | TauF ktr => TauF (dualize ktr) *)
-  (*     | @VisF _ _ _ _ (inl1 e) ktr => *)
-  (*         VisF (@inl1 _ _ _ e) (fun x => dualize (ktr x)) *)
-  (*     | @VisF _ _ _ X (inr1 e) ktr => *)
-  (*         VisF (inr1 (match e in (eventE T) return (eventE T) with *)
-  (*                     | @Choose X0 => @Take X0 *)
-  (*                     | @Take X0 => @Choose X0 *)
-  (*                     | Syscall fn varg rvs => (Syscall fn varg rvs) *)
-  (*                     end)) (fun x => dualize (ktr x)) *)
-  (*     end. *)
-  (* Proof. unfold dualize. ides itr; ss. destruct e; ss. Qed. *)
+  (** Direct definition (using "cofix") of "dualize". **)
+  (** It satisfies stronger "dualize_involution" and "dualize_simg", though not very interesting. **)
+  CoFixpoint dualize2 (R: Type) (itr: itree (E +' eventE) R): itree (E +' eventE) R :=
+    match (observe itr) with
+    | RetF r => Ret r
+    | TauF ktr => tau;; (dualize2 ktr)
+    | @VisF _ _ _ _ (inl1 e) ktr =>
+        Vis (@inl1 _ _ _ e) (fun x => dualize2 (ktr x))
+    | @VisF _ _ _ X (inr1 e) ktr =>
+        Vis (inr1 (match e in (eventE T) return (eventE T) with
+             | @Choose X0 => @Take X0
+             | @Take X0 => @Choose X0
+             | Syscall fn varg rvs => (Syscall fn varg rvs)
+             end)) (fun x => dualize2 (ktr x))
+    end.
 
-  (* Lemma dualize_involution *)
-  (*       R (itr: itree (E +' eventE) R) *)
-  (*   : *)
-  (*   dualize (dualize itr) = itr. *)
-  (* Proof. *)
-  (*   eapply bisim_is_eq. revert itr. pcofix CIH. i. pfold. rr. do 2 rewrite observe_dualize. *)
-  (*   destruct (observe itr); ss; eauto. *)
-  (*   destruct e; ss; auto. destruct e; ss; auto. *)
-  (* Qed. *)
+  Lemma observe_dualize2
+        R (itr: itree (E +' eventE) R)
+    :
+    observe (dualize2 itr) =
+      match (observe itr) with
+      | RetF r => RetF r
+      | TauF ktr => TauF (dualize2 ktr)
+      | @VisF _ _ _ _ (inl1 e) ktr =>
+          VisF (@inl1 _ _ _ e) (fun x => dualize2 (ktr x))
+      | @VisF _ _ _ X (inr1 e) ktr =>
+          VisF (inr1 (match e in (eventE T) return (eventE T) with
+                      | @Choose X0 => @Take X0
+                      | @Take X0 => @Choose X0
+                      | Syscall fn varg rvs => (Syscall fn varg rvs)
+                      end)) (fun x => dualize2 (ktr x))
+      end.
+  Proof. unfold dualize2. ides itr; ss. destruct e; ss. Qed.
 
-  (* Lemma dualize_ret *)
-  (*       R (r: R) *)
-  (*   : *)
-  (*   dualize (Ret r) = Ret r. *)
-  (* Proof. eapply observe_eta. ss. Qed. *)
+  Lemma dualize2_involution
+        R (itr: itree (E +' eventE) R)
+    :
+    dualize2 (dualize2 itr) = itr.
+  Proof.
+    eapply bisim_is_eq. revert itr. pcofix CIH. i. pfold. rr. do 2 rewrite observe_dualize2.
+    destruct (observe itr); ss; eauto.
+    destruct e; ss; auto. destruct e; ss; auto.
+  Qed.
 
-  (* Lemma dualize_tau *)
-  (*       R ktr *)
-  (*   : *)
-  (*   @dualize R (tau;; ktr) = tau;; (dualize ktr). *)
-  (* Proof. eapply observe_eta. ss. Qed. *)
+  Lemma dualize2_ret
+        R (r: R)
+    :
+    dualize2 (Ret r) = Ret r.
+  Proof. eapply observe_eta. ss. Qed.
 
-  (* Lemma dualize_vis_l *)
-  (*       R X (e: E X) (ktr: X -> itree (E +' eventE) R) *)
-  (*   : *)
-  (*   @dualize R (trigger e >>= ktr) = trigger e >>= (fun x => dualize (ktr x)). *)
-  (* Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed. *)
+  Lemma dualize2_tau
+        R ktr
+    :
+    @dualize2 R (tau;; ktr) = tau;; (dualize2 ktr).
+  Proof. eapply observe_eta. ss. Qed.
 
-  (* Lemma dualize_vis_r *)
-  (*       R X (e: eventE X) (ktr: X -> itree (E +' eventE) R) *)
-  (*   : *)
-  (*   @dualize R (trigger e >>= ktr) = *)
-  (*     trigger (match e with *)
-  (*              | @Choose X => @Take X  *)
-  (*              | @Take X => (@Choose X) *)
-  (*              | Syscall fn varg rvs => (Syscall fn varg rvs) *)
-  (*              end) >>= (fun x => dualize (ktr x)). *)
-  (* Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed. *)
+  Lemma dualize2_vis_l
+        R X (e: E X) (ktr: X -> itree (E +' eventE) R)
+    :
+    @dualize2 R (trigger e >>= ktr) = trigger e >>= (fun x => dualize2 (ktr x)).
+  Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
 
-  (* Theorem simg_dualize *)
-  (*         R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop) *)
-  (*         (itr0: itree (E +' eventE) R0) *)
-  (*         (itr1: itree (E +' eventE) R1) *)
-  (*         f_src f_tgt *)
-  (*         (SIM: simg (E:=E) RR f_src f_tgt itr0 itr1) *)
-  (*   : *)
-  (*   simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (dualize itr1) (dualize itr0). *)
-  (* Proof. *)
-  (*   ginit. revert_until RR. gcofix CIH. i. induction SIM using simg_ind. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_ret. econs 1; eauto. *)
-  (*   - gstep. rewrite ! dualize_vis_r. econs 2. i. specialize (SIM _ _ EQ). gbase. subst; eauto. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_vis_r. des. econs; eauto. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_vis_r. econs; eauto. i. specialize (SIM x). des. eauto. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_vis_r. econs; eauto. i. specialize (SIM x). des. eauto. *)
-  (*   - guclo simg_indC_spec. rewrite ! dualize_vis_r. des. econs; eauto. *)
-  (*   - gstep. econs; eauto. gbase; eauto. *)
-  (*   - gstep. rewrite ! dualize_vis_l. econs 10. i. specialize (SIM _ _ EQ). gbase. subst; eauto. *)
-  (* Qed. *)
+  Lemma dualize2_vis_r
+        R X (e: eventE X) (ktr: X -> itree (E +' eventE) R)
+    :
+    @dualize2 R (trigger e >>= ktr) =
+      trigger (match e with
+               | @Choose X => @Take X
+               | @Take X => (@Choose X)
+               | Syscall fn varg rvs => (Syscall fn varg rvs)
+               end) >>= (fun x => dualize2 (ktr x)).
+  Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
 
-  (* Corollary dualize_simg *)
-  (*         R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop) *)
-  (*         (itr0: itree (E +' eventE) R0) *)
-  (*         (itr1: itree (E +' eventE) R1) *)
-  (*         f_src f_tgt *)
-  (*         (SIM: simg RR f_src f_tgt (dualize itr0) (dualize itr1)) *)
-  (*   : *)
-  (*   simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (itr1) (itr0). *)
-  (* Proof. *)
-  (*   apply simg_dualize in SIM. rewrite ! dualize_involution in SIM. eauto. *)
-  (* Qed. *)
+  Theorem simg_dualize2
+          R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop)
+          (itr0: itree (E +' eventE) R0)
+          (itr1: itree (E +' eventE) R1)
+          f_src f_tgt
+          (SIM: simg (E:=E) RR f_src f_tgt itr0 itr1)
+    :
+    simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (dualize2 itr1) (dualize2 itr0).
+  Proof.
+    ginit. revert_until RR. gcofix CIH. i. induction SIM using simg_ind.
+    - guclo simg_indC_spec. rewrite ! dualize2_ret. econs 1; eauto.
+    - gstep. rewrite ! dualize2_vis_r. econs 2. i. specialize (SIM _ _ EQ). gbase. subst; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize2_tau. econs; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize2_tau. econs; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize2_vis_r. des. econs; eauto.
+    - guclo simg_indC_spec. rewrite ! dualize2_vis_r. econs; eauto. i. specialize (SIM x). des. eauto.
+    - guclo simg_indC_spec. rewrite ! dualize2_vis_r. econs; eauto. i. specialize (SIM x). des. eauto.
+    - guclo simg_indC_spec. rewrite ! dualize2_vis_r. des. econs; eauto.
+    - gstep. econs; eauto. gbase; eauto.
+    - gstep. rewrite ! dualize2_vis_l. econs 10. i. specialize (SIM _ _ EQ). gbase. subst; eauto.
+  Qed.
+
+  Corollary dualize2_simg
+          R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop)
+          (itr0: itree (E +' eventE) R0)
+          (itr1: itree (E +' eventE) R1)
+          f_src f_tgt
+          (SIM: simg RR f_src f_tgt (dualize2 itr0) (dualize2 itr1))
+    :
+    simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (itr1) (itr0).
+  Proof.
+    apply simg_dualize2 in SIM. rewrite ! dualize2_involution in SIM. eauto.
+  Qed.
 
 End DUAL.
 
