@@ -1647,6 +1647,61 @@ But this is beyond the scope of previous works (ITrees).
     - gstep. econs; eauto; refl.
   Qed.
 
+  (* in the style of eutt_interp' *)
+  Theorem simg_interp' {E F R0 R1} (RR : Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+    (i_src: itree (E +' eventE) R0)
+    (i_tgt: itree (E +' eventE) R1)
+    (f: E ~> itree (F +' eventE))
+    f_src f_tgt
+    (SIM: simg RR f_src f_tgt i_src i_tgt)
+    :
+    simg RR f_src f_tgt (interp (case_ f trivial_Handler) i_src) (interp (case_ f trivial_Handler) i_tgt)
+  .
+  Proof.
+    i. ginit. revert_until RR.
+    gcofix CIH.
+    i. induction SIM using simg_ind.
+    - rewrite ! interp_ret. gstep. econs; eauto.
+    - rewrite ! interp_bind. rewrite ! interp_trigger. irw. unfold trivial_Handler.
+      gstep. econs; eauto. ii. subst. irw.
+      guclo simg_indC_spec. econs; eauto.
+      guclo simg_indC_spec.
+    - rewrite interp_tau. guclo simg_indC_spec.
+    - rewrite interp_tau. guclo simg_indC_spec.
+    - des.
+      rewrite interp_bind. rewrite interp_trigger. irw.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      irw. guclo simg_indC_spec.
+    - rewrite interp_bind. rewrite interp_trigger. irw.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      spc SIM. des.
+      irw. guclo simg_indC_spec.
+    - rewrite interp_bind. rewrite interp_trigger. irw.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      spc SIM. des.
+      irw. guclo simg_indC_spec.
+    - des.
+      rewrite interp_bind. rewrite interp_trigger. irw.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      irw. guclo simg_indC_spec.
+    - gstep. econs; eauto. gbase. eapply CIH; et.
+    - rewrite ! interp_bind. rewrite ! interp_trigger. irw.
+      guclo bindC_spec. econs; eauto.
+      { gfinal. right. eapply paco7_mon.
+        { eapply simg_refl. }
+        ii; ss.
+      }
+      ii. ss. des. subst. irw.
+      guclo simg_indC_spec. econs; eauto. instantiate (1:=(Ord.S f_src0)%ord).
+      guclo simg_indC_spec. econs; eauto. instantiate (1:=(Ord.S f_tgt0)%ord).
+      gstep. econsr; eauto.
+      { gbase. eapply CIH; eauto. }
+      { eapply Ord.S_is_S. }
+      { eapply Ord.S_is_S. }
+  Unshelve.
+    all: ss.
+  Qed.
+
   Let simg {E R}: relation (itree (E +' eventE) R) := simg (fun _ _ => eq) 0%ord 0%ord.
 
   (* in the style of eutt_iter *)
@@ -1657,6 +1712,16 @@ But this is beyond the scope of previous works (ITrees).
   ii. subst. eapply simg_iter' with (RI:=eq); ss. i. subst. r in H. specialize (H i2 i2 eq_refl). r in H.
   rp; et. extensionalities o0 o1 i0 i1. eapply prop_ext. split; i; eapply sum_rel_eq; ss.
   Defined.
+
+  (* respectful_eutt *)
+  Let respectful_simg {E F} := (Relation.i_respectful (fun T => simg (E:=E) (R:=T)) (fun T => simg (E:=F) (R:=T))).
+
+  (* in the style of eutt_interp *)
+  #[global] Program Instance simg_interp {E F} (f: forall T : Type, E T -> itree (F +' eventE) T):
+    Proper (respectful_simg) (interp (case_ f trivial_Handler) (E:=E +' eventE)).
+  Next Obligation.
+    ii. eapply simg_interp'. eauto.
+  Qed.
 
 End ITER.
 
