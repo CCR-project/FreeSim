@@ -67,21 +67,66 @@ Proof.
       { eapply Ord.S_lt. }
 Qed.
 
+Variant postcondC (r: forall S0 S1 (SS: Ord.t -> Ord.t -> S0 -> S1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) S0) -> (itree (E +' eventE) S1) -> Prop):
+  forall S0 S1 (SS: Ord.t -> Ord.t -> S0 -> S1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) S0) -> (itree (E +' eventE) S1) -> Prop :=
+| postcondC_intro
+    f_src f_tgt R0 R1 (RR0 RR1: Ord.t -> Ord.t -> R0 -> R1 -> Prop) itr_src itr_tgt
+    (MON: RR0 <4= RR1)
+    (SIM: r _ _ RR0 f_src f_tgt itr_src itr_tgt)
+  :
+    postcondC r RR1 f_src f_tgt itr_src itr_tgt
+.
+Hint Constructors postcondC: core.
+
+Lemma postcondC_mon
+      r1 r2
+      (LE: r1 <7= r2)
+  :
+    postcondC r1 <7= postcondC r2
+.
+Proof. ii. destruct PR; econs; et. Qed.
+Hint Resolve postcondC_mon: paco.
+
+Lemma postcondC_wrespectful: wrespectful7 (_simg (E:= E)) postcondC.
+Proof.
+  econs; eauto with paco.
+  ii. inv PR. csc.
+  eapply GF in SIM.
+  rename x2 into RR1.
+  induction SIM using _simg_ind2; i; clarify.
+  - econs; eauto.
+  - econs; eauto. i. subst. eapply rclo7_clo'; eauto. econs; eauto. eapply rclo7_base. eauto.
+  - econs; eauto.
+  - econs; eauto.
+  - des. econs; eauto.
+  - econs; eauto. i. spc SIM. des. eauto.
+  - econs; eauto. i. spc SIM. des. eauto.
+  - des. econs; eauto.
+  - econs; eauto. eapply rclo7_clo'; eauto. econs; eauto. eapply rclo7_base. eauto.
+  - econsr; eauto. i. subst. eapply rclo7_clo'; eauto. econs; eauto. eapply rclo7_base. eauto.
+Qed.
+
+Lemma postcondC_spec: postcondC <8= gupaco7 (_simg (E:=E)) (cpn7 (_simg (E:=E))).
+Proof.
+  intros. eapply wrespect7_uclo; eauto with paco. eapply postcondC_wrespectful.
+Qed.
+
 Theorem simg_postcond_mono: forall (R0 R1: Type) Q0 Q1 (IMPL: Q0 <4= Q1),
     simg (E:=E) (R0:=R0) (R1:=R1) Q0 <4= simg Q1.
 Proof.
-  ginit. gcofix CIH.
-  i. punfold PR. induction PR using _simg_ind2.
-  - gstep. econs; eauto.
-  - gstep. econs; eauto. i. subst. specialize (SIM x_tgt x_tgt eq_refl). pclearbot. gfinal. eauto.
-  - guclo simg_indC_spec.
-  - guclo simg_indC_spec.
-  - des. guclo simg_indC_spec.
-  - guclo simg_indC_spec. econs; eauto. i. eapply SIM.
-  - guclo simg_indC_spec. econs; eauto. i. eapply SIM.
-  - des. guclo simg_indC_spec.
-  - gstep. econs; eauto. pclearbot. gbase. eapply CIH; et.
-  - gstep. econsr; eauto. i. subst. specialize (SIM x_tgt x_tgt eq_refl). pclearbot. gfinal. eauto.
+  i. ginit. guclo postcondC_spec.
+  (* ginit. gcofix CIH. *)
+  (* i. punfold PR. induction PR using _simg_ind2. *)
+  (* - gstep. econs; eauto. *)
+  (* - gstep. econs; eauto. i. subst. specialize (SIM x_tgt x_tgt eq_refl). pclearbot. gfinal. eauto. *)
+  (* - guclo simg_indC_spec. *)
+  (* - guclo simg_indC_spec. *)
+  (* - des. guclo simg_indC_spec. *)
+  (* - guclo simg_indC_spec. econs; eauto. i. eapply SIM. *)
+  (* - guclo simg_indC_spec. econs; eauto. i. eapply SIM. *)
+  (* - des. guclo simg_indC_spec. *)
+  (* - gstep. econs; eauto. pclearbot. gbase. eapply CIH; et. *)
+  (* - gstep. econsr; eauto. i. subst. specialize (SIM x_tgt x_tgt eq_refl). pclearbot. gfinal. eauto. *)
 Qed.
 
 (* Definition postcond_mon {R0 R1: Type} (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop): Prop := *)
@@ -1168,20 +1213,35 @@ Section DUAL.
     i. unfold dualize. rewrite interp_bind. refl.
   Qed.
 
-  Theorem simg_dualize
-          R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop)
-          (itr0: itree (E +' eventE) R0)
-          (itr1: itree (E +' eventE) R1)
-          f_src f_tgt
-          (SIM: simg (E:=E) RR f_src f_tgt itr0 itr1)
+  Variant dualizeC (r: forall S0 S1 (SS: Ord.t -> Ord.t -> S0 -> S1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) S0) -> (itree (E +' eventE) S1) -> Prop):
+    forall S0 S1 (SS: Ord.t -> Ord.t -> S0 -> S1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) S0) -> (itree (E +' eventE) S1) -> Prop :=
+    | dualizeC_intro
+        f_src f_tgt R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) itr_src itr_tgt
+        (SIM: r _ _  RR f_tgt f_src itr_src itr_tgt)
+      :
+      dualizeC r (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_src f_tgt (dualize itr_tgt) (dualize itr_src)
+  .
+  Hint Constructors dualizeC: core.
+
+  Lemma dualizeC_mon
+    r1 r2
+    (LE: r1 <7= r2)
     :
-    simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (dualize itr1) (dualize itr0).
+    dualizeC r1 <7= dualizeC r2
+  .
+  Proof. ii. destruct PR; econs; et. Qed.
+  Hint Resolve dualizeC_mon: paco.
+
+  Lemma dualizeC_grespectful: grespectful dualizeC.
   Proof.
-    ginit. revert_until RR. gcofix CIH. i. induction SIM using simg_ind.
+    econs; eauto with paco.
+    ii. inv PR. csc.
+    eapply GF in SIM.
+    induction SIM using _simg_ind2.
     - guclo simg_indC_spec. rewrite ! dualize_ret. econs 1; eauto.
     - gstep. rewrite ! dualize_vis_r. econs 2. i. specialize (SIM _ _ EQ).
       guclo simg_indC_spec. econs; eauto. guclo simg_indC_spec. econs; eauto.
-      gbase. subst; eauto.
+      gbase. subst; eauto. eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
     - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto.
     - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto.
     - guclo simg_indC_spec. rewrite ! dualize_vis_r. des. econs; eauto. esplits; eauto.
@@ -1193,11 +1253,30 @@ Section DUAL.
     - guclo simg_indC_spec. rewrite ! dualize_vis_r. des. econs; eauto. esplits; eauto.
       guclo simg_indC_spec.
     - gstep. econs; eauto. gbase; eauto.
+      eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
     - gstep. rewrite ! dualize_vis_l. econs 10. i. specialize (SIM _ _ EQ).
       guclo simg_indC_spec. econs; eauto. guclo simg_indC_spec. econs; eauto.
       gbase. subst; eauto.
+      eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
   Unshelve.
     all: ss.
+  Qed.
+
+  Lemma dualizeC_spec: dualizeC <8= gupaco7 (_simg (E:=E)) (cpn7 (_simg (E:=E))).
+  Proof.
+    intros. eapply grespect_uclo; eauto with paco. eapply dualizeC_grespectful.
+  Qed.
+
+  Theorem simg_dualize
+          R0 R1 (RR: _ -> _ -> R0 -> R1 -> Prop)
+          (itr0: itree (E +' eventE) R0)
+          (itr1: itree (E +' eventE) R1)
+          f_src f_tgt
+          (SIM: simg (E:=E) RR f_src f_tgt itr0 itr1)
+    :
+    simg (fun o0 o1 r0 r1 => RR o1 o0 r1 r0) f_tgt f_src (dualize itr1) (dualize itr0).
+  Proof.
+    ginit. guclo dualizeC_spec.
   Qed.
 
   (** Indeed, we can strengthen below so that RR can relate "Ord.t"s too. That would require manual coinduction again? **)
