@@ -485,3 +485,74 @@ Proof.
 Qed.
 
 End EXAMPLES_CTREES.
+
+
+Section EXAMPLES_CCR.
+Variable E: Type -> Type.
+
+Definition flip_n_spec (n : nat) : dtree E nat :=
+  m <- trigger (Choose nat) ;;
+  guarantee(m <= n) ;;;
+  Ret m.
+
+Definition flip_n_body (n : nat) : itree (Recursion.callE nat nat +' E +' eventE) nat :=
+  match n with
+  | 0 => Ret 0
+  | S m =>
+    y <- call m ;;
+    v <- trigger (Choose bool) ;;
+    Ret ((Nat.b2n v) + y)
+  end.
+
+(** The factorial function itself is defined as an ITree by "tying
+    the knot" using [rec].
+ *)
+Definition flip_n (n : nat) : dtree E nat :=
+  rec flip_n_body n.
+
+Lemma unfold_flip_n : forall n,
+    (match n with
+     | 0 => Ret 0
+     | S m =>
+         y <- flip_n m ;;
+         v <- trigger (Choose bool) ;;
+         Ret ((Nat.b2n v) + y)
+     end) ⪸ (flip_n n).
+Proof.
+  intros x.
+  unfold flip_n.
+  (* ADMITTED *)
+  rewrite rec_as_interp. unfold flip_n_body at 3.
+  destruct x.
+  - rewrite interp_ret.
+    reflexivity.
+  - rewrite interp_bind.
+    rewrite interp_recursive_call.
+    eapply simg_bind.
+    { refl. }
+    ii. subst.
+    rewrite interp_bind.
+    rewrite interp_trigger. rewrite bind_bind. cbn. eapply simg_bind.
+    { refl. }
+    ii. subst. irw. rewrite tau_eutt. rewrite interp_ret. refl.
+Qed.
+
+Lemma flip_n_correct : forall n,
+    flip_n_spec n ⪸ (flip_n n).
+Proof.
+  intros n.
+  induction n as [ | n' IH ].
+  - (* n = 0 *)
+    rewrite <- unfold_flip_n. unfold flip_n_spec. eapply simg_dem_src. exists 0.
+    unfold guarantee. rewrite bind_bind. eapply simg_dem_src. unshelve esplits; et. irw. refl.
+  - (* n = S n' *)
+    rewrite <- unfold_flip_n. unfold flip_n_spec. rewrite <- IH. unfold flip_n_spec.
+    rewrite ! bind_bind. eapply simg_dem_tgt. i.
+    unfold guarantee. rewrite ! bind_bind. eapply simg_dem_tgt. i.
+    rewrite ! bind_ret_l. eapply simg_dem_tgt. i.
+    eapply simg_dem_src. exists (Nat.b2n x1 + x). rewrite bind_bind.
+    eapply simg_dem_src. unshelve esplits; et.
+    { unfold Nat.b2n. des_ifs; lia. }
+    irw. refl.
+Qed.
+End EXAMPLES_CCR.
