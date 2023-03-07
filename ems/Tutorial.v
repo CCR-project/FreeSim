@@ -487,6 +487,7 @@ Qed.
 End EXAMPLES_CTREES.
 
 
+Module EXAMPLES_CCR.
 Section EXAMPLES_CCR.
 Variable E: Type -> Type.
 
@@ -556,3 +557,87 @@ Proof.
     irw. refl.
 Qed.
 End EXAMPLES_CCR.
+End EXAMPLES_CCR.
+
+
+
+Module EXAMPLES_CCR2.
+Section EXAMPLES_CCR.
+Variable E: Type -> Type.
+
+Definition flip_n_spec (n : nat) : dtree E nat :=
+  m <- trigger (Choose nat) ;;
+  guarantee(m <= n) ;;;
+  Ret m.
+
+Definition flip_n_body : (nat * nat) -> dtree E ((nat * nat) + nat) :=
+  fun '(n, accum) =>
+    match n with
+    | 0 => Ret (inr accum)
+    | S m =>
+        v <- trigger (Choose bool) ;;
+        Ret (inl (m, (Nat.b2n v) + accum))
+    end.
+
+(** The factorial function itself is defined as an ITree by "tying
+    the knot" using [rec].
+ *)
+Definition flip_n (n : nat) (accum: nat) : dtree E nat :=
+  ITree.iter flip_n_body (n, accum).
+
+Lemma unfold_flip_n : forall n accum,
+    (flip_n n accum) ≈
+    (match n with
+     | 0 => Ret accum
+     | S m =>
+         v <- trigger (Choose bool) ;;
+         flip_n m ((Nat.b2n v) + accum)
+     end).
+Proof.
+  i.
+  unfold flip_n.
+  rewrite unfold_iter. ss.
+  destruct n.
+  - irw. refl.
+  - rewrite bind_bind.
+    eapply eutt_eq_bind.
+    { refl. }
+    i. irw. rewrite tau_eutt. refl.
+Qed.
+
+Lemma flip_n_defer: forall n accum, (r <- (flip_n n 0);; Ret (r + accum)) ≈ flip_n n accum.
+Proof.
+  induction n.
+  - intros. rewrite ! unfold_flip_n. irw. refl.
+  - intros. rewrite ! unfold_flip_n.
+    rewrite bind_bind. eapply eutt_eq_bind. { refl. } ii.
+    rewrite Nat.add_0_r.
+    rewrite <- IHn. irw.
+    rewrite <- (IHn (Nat.b2n u + accum)).
+    eapply eutt_eq_bind; try refl. ii. ss. irw. rewrite Nat.add_assoc. refl.
+Qed.
+
+Lemma flip_n_correct : forall n,
+    flip_n_spec n ⪸ (flip_n n 0).
+Proof.
+  intros n.
+  induction n as [ | n' IH ].
+  - (* n = 0 *)
+    rewrite unfold_flip_n.
+    unfold flip_n_spec. eapply simg_dem_src. exists 0.
+    unfold guarantee. rewrite bind_bind. eapply simg_dem_src. unshelve esplits; et. irw. refl.
+  - (* n = S n' *)
+    rewrite unfold_flip_n. unfold flip_n_spec.
+    eapply simg_dem_tgt. i.
+    rewrite <- flip_n_defer. rewrite <- IH. unfold flip_n_spec.
+    rewrite ! bind_bind. eapply simg_dem_tgt. i.
+    unfold guarantee. rewrite ! bind_bind. eapply simg_dem_tgt. i.
+    rewrite ! bind_ret_l. rewrite Nat.add_0_r.
+    eapply simg_dem_src. exists (x0 + Nat.b2n x). rewrite bind_bind.
+    eapply simg_dem_src. unshelve esplits; et.
+    { unfold Nat.b2n. des_ifs; lia. }
+    irw. refl.
+Qed.
+
+End EXAMPLES_CCR.
+End EXAMPLES_CCR2.
