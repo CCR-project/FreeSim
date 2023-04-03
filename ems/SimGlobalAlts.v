@@ -20,13 +20,21 @@ Section COMMON.
   Variable R: Type.
   Let ITR := (itree (E +' eventE) R).
 
-  Variant obs_step (args: string * Any.t * (Any.t -> Prop) * Any.t) (r: ITR -> Prop): ITR -> Prop :=
+  Variant obs_step (args: string * Any.t * (Any.t -> Prop)) (r: ITR -> Prop): ITR -> Prop :=
     | obs_step_syscall
         fn varg rvs v ktr
         (REL: r (ktr v))
-        (ARGS: args = (fn, varg, rvs, v))
+        (ARGS: args = (fn, varg, rvs))
       :
       obs_step args r (trigger (SyscallOut fn varg rvs) >>= ktr)
+  .
+
+  Variant obs_step_in (args: Any.t) (r: ITR -> Prop): ITR -> Prop :=
+    | obs_step_syscall_in
+        rv ktr
+        (ARGS: args = rv)
+      :
+      obs_step_in args r (trigger (SyscallIn rv) >>= ktr)
   .
 
   Variant is_obs (arg: string * Any.t * (Any.t -> Prop)): ITR -> Prop :=
@@ -35,6 +43,13 @@ Section COMMON.
         (ARG: arg = (fn, varg, rvs))
       :
       is_obs arg (trigger (SyscallOut fn varg rvs) >>= ktr).
+
+  Variant is_obs_in (arg: Any.t): ITR -> Prop :=
+    | is_obs_in_intro
+        rv ktr
+        (ARG: arg = rv)
+      :
+      is_obs_in arg (trigger (SyscallIn rv) >>= ktr).
 
   Variant event_step {X: Type} (x: X) (r: ITR -> Prop): ITR -> Prop :=
     | event_step_intro
@@ -401,6 +416,10 @@ Section EXP_SIM.
         (exists arg,
             ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
               (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+      \/
+        (exists arg,
+            ((is_obs_in arg itr_src) /\ (is_obs_in arg itr_tgt)) /\
+              ((<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (exists X (e: E X),
             ((is_event e itr_src) /\ (is_event e itr_tgt)) /\

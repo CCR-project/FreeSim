@@ -42,6 +42,13 @@ Inductive _simg
   :
     _simg simg RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
 
+| simg_syscall_in
+    ktr_src0 ktr_tgt0 rv
+    f_src0 f_tgt0
+    (SIM: simg _ _ RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt))
+  :
+    _simg simg RR f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0)
+
 | simg_tauL
     itr_src0 itr_tgt0
     (TAUL: True)
@@ -122,6 +129,12 @@ Lemma _simg_ind2 (r: forall R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop), Ord.
           ktr_src0 ktr_tgt0 fn varg rvs
           (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), r _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)),
           P f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0))
+      (SYSCALLIN: forall
+          f_src f_tgt
+          f_src0 f_tgt0
+          ktr_src0 ktr_tgt0 rv
+          (SIM: r _ _ RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt)),
+          P f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0))
       (TAUL: forall
           f_src0
           f_src f_tgt
@@ -188,6 +201,7 @@ Proof.
   fix IH 5. i. inv SIM.
   { eapply RET; eauto. }
   { eapply SYSCALL; eauto. }
+  { eapply SYSCALLIN; eauto. }
   { eapply TAUL; eauto. }
   { eapply TAUR; eauto. }
   { eapply CHOOSEL; eauto. des. esplits; eauto. }
@@ -207,12 +221,13 @@ Proof.
   { econs 2; eauto. }
   { econs 3; eauto. }
   { econs 4; eauto. }
-  { econs 5; eauto. des. esplits; eauto. }
-  { econs 6; eauto. i. spc SIM. des; et. }
+  { econs 5; eauto. }
+  { econs 6; eauto. des. esplits; eauto. }
   { econs 7; eauto. i. spc SIM. des; et. }
-  { econs 8; eauto. des. esplits; eauto. }
-  { econs 9; eauto. }
+  { econs 8; eauto. i. spc SIM. des; et. }
+  { econs 9; eauto. des. esplits; eauto. }
   { econs 10; eauto. }
+  { econs 11; eauto. }
 Qed.
 Hint Resolve simg_mon: paco.
 Hint Resolve cpn7_wcompat: paco.
@@ -311,13 +326,13 @@ Proof.
   econs; eauto with paco. i. inv PR.
   { econs 1; eauto. }
   { econs 2; eauto. i. eapply rclo7_base. auto. }
-  { econs 3; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
   { econs 4; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
-  { des. econs 5; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
-  { econs 6; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { econs 5; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
+  { des. econs 6; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
   { econs 7; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
-  { des. econs 8; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
-  { econs 10; eauto. i. eapply rclo7_base. auto. }
+  { econs 8; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { des. econs 9; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { econs 11; eauto. i. eapply rclo7_base. auto. }
 Qed.
 
 Lemma simg_ind R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
@@ -336,6 +351,12 @@ Lemma simg_ind R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
           ktr_src0 ktr_tgt0 fn varg rvs
           (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)),
           P f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0))
+      (SYSCALLIN: forall
+          f_src f_tgt
+          f_src0 f_tgt0
+          ktr_src0 ktr_tgt0 rv
+          (SIM: simg RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt)),
+          P f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0))
       (TAUL: forall
           f_src0
           f_src f_tgt
@@ -402,6 +423,7 @@ Proof.
   i. punfold SIM. induction SIM using _simg_ind2; i; clarify.
   { eapply RET; eauto. }
   { eapply SYSCALL; eauto. i. hexploit SIM; eauto. i. des. pclearbot. eauto. }
+  { eapply SYSCALLIN; eauto. pclearbot. eauto. }
   { eapply TAUL; eauto. pfold. auto. }
   { eapply TAUR; eauto. pfold. auto. }
   { eapply CHOOSEL; eauto. des. esplits; eauto. pfold. auto. }
