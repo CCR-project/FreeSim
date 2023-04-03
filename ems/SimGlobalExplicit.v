@@ -33,7 +33,7 @@ Section SIM.
         f_src0 f_tgt0
         (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg_exp _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
       :
-      _simg_exp simg_exp RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+      _simg_exp simg_exp RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
 
     | simg_exp_tauL
         itr_src0 itr_tgt0

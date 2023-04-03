@@ -26,7 +26,7 @@ Section COMMON.
         (REL: r (ktr v))
         (ARGS: args = (fn, varg, rvs, v))
       :
-      obs_step args r (trigger (Syscall fn varg rvs) >>= ktr)
+      obs_step args r (trigger (SyscallOut fn varg rvs) >>= ktr)
   .
 
   Variant is_obs (arg: string * Any.t * (Any.t -> Prop)): ITR -> Prop :=
@@ -34,7 +34,7 @@ Section COMMON.
         fn varg rvs ktr
         (ARG: arg = (fn, varg, rvs))
       :
-      is_obs arg (trigger (Syscall fn varg rvs) >>= ktr).
+      is_obs arg (trigger (SyscallOut fn varg rvs) >>= ktr).
 
   Variant event_step {X: Type} (x: X) (r: ITR -> Prop): ITR -> Prop :=
     | event_step_intro

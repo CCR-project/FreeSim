@@ -36,7 +36,7 @@ Section SIM.
       f_src0 f_tgt0
       (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), @_simg_aux simg_aux _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
     :
-    _simg_aux simg_aux RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+    _simg_aux simg_aux RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
 
   | simg_aux_tauL
       itr_src0 itr_tgt0
@@ -110,7 +110,7 @@ Section SIM.
             f_src0 f_tgt0
             ktr_src0 ktr_tgt0 fn varg rvs
             (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), (<<SIM: _simg_aux r RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>) /\ (<<IH: P f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>)),
-            P f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0))
+            P f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0))
         (TAUL: forall
             f_src0
             f_src f_tgt
@@ -223,7 +223,7 @@ Section SIM.
         ktr_src0 ktr_tgt0 fn varg rvs
         (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg_aux _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
       :
-      simg_aux_indC simg_aux RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+      simg_aux_indC simg_aux RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
 
     | simg_aux_indC_tauL
         f_src0
@@ -320,7 +320,7 @@ Section SIM.
             f_src f_tgt
             ktr_src0 ktr_tgt0 fn varg rvs
             (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), (<<SIMG: simg_aux RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>) /\ (<<IH: P f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>)),
-            P f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0))
+            P f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0))
         (TAUL: forall
             f_src0
             f_src f_tgt
@@ -467,7 +467,7 @@ Section GEN.
       (GEN: forall x_src x_tgt (EQ: x_src = x_tgt),
           gen_exp RR f_src0 f_tgt0 (g_src0) (ktr_src0 x_src) (g_tgt0) (ktr_tgt0 x_tgt))
     :
-    gen_exp RR f_src f_tgt (g_src) (trigger (Syscall fn varg rvs) >>= ktr_src0) (g_tgt) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (g_tgt) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
 
   | gen_exp_tauL
       itr_src0 itr_tgt0
