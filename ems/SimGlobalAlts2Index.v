@@ -36,7 +36,7 @@ Section PROOF.
     ginit. revert_until TOP. gcofix CIH. i.
     revert_until SIM. induction SIM using simg_alt_imp_ind; i.
     { inv TGT. inv SRC. guclo simg_indC_spec. econs 1; eauto. all: refl. }
-    { inv TGT. inv SRC. inv ARG. gstep. econs 2. i. subst. specialize (SIM x_tgt).
+    { inv TGT. inv SRC. inv ARG. gstep. econs 2. i. subst. des_u.
       inv SIM. inv REL. clarify. rewrite ! bind_trigger in *.
       inv H0. apply inj_pair2 in H2. eapply equal_f in H2.
       inv H1. apply inj_pair2 in H0. eapply equal_f in H0.

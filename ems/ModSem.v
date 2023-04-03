@@ -124,8 +124,9 @@ Section MODSEML.
   | step_syscall_out
       fn args (rvs: Any.t -> Prop) k
     :
-      step (Vis (subevent _ (SyscallOut fn args rvs)) k) (Some (event_out fn args))
-        (rv <- trigger (Choose _);; guarantee(rvs rv /\ syscall_sem fn args rv);;; trigger (SyscallIn rv);;; k rv)
+      (* step (Vis (subevent _ (SyscallOut fn args rvs)) k) (Some (event_out fn args)) *)
+      (*   (rv <- trigger (Choose _);; guarantee(rvs rv /\ syscall_sem fn args rv);;; trigger (SyscallIn rv);;; k rv) *)
+      step (Vis (subevent _ (SyscallOut fn args rvs)) k) (Some (event_out fn args)) (k tt)
   | step_syscall_in
       rv k
     :

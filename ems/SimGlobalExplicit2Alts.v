@@ -56,7 +56,7 @@ Section PROOF.
       i.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt1, f_src1)). gfinal. left. eapply CIH; eauto.
-      specialize (SIM0 rv rv eq_refl). pclearbot. eapply SIM0.
+      specialize (SIM0 tt tt eq_refl). pclearbot. eapply SIM0.
     }
     { right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
@@ -112,7 +112,7 @@ Section PROOF.
       i.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt0, f_src0)). gfinal. left. eapply CIH; eauto.
-      specialize (SIM0 rv rv eq_refl). pclearbot. eapply SIM0.
+      specialize (SIM0 tt tt eq_refl). pclearbot. eapply SIM0.
     }
     { gstep. do 2 right. left. exists (rv). splits; [econs; eauto | econs; eauto |].
       i.

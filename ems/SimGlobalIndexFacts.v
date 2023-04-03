@@ -1611,15 +1611,15 @@ Proof.
     inv STEP; rewrite bind_trigger in *; simpl_depind; clarify.
     esplits; eauto.
     { econs; eauto. }
-    gstep.
-    eapply sim_demonic_tgt; ss. i. inv STEP; rewrite bind_trigger in *; simpl_depind; clarify. esplits.
-    eapply sim_demonic_src; ss. esplits; ss. { econs; eauto. }
-    unfold guarantee. irw.
-    eapply sim_demonic_tgt; ss. i. inv STEP; simpl_depind; clarify. esplits.
-    eapply sim_demonic_src; ss. esplits; ss. { econs; eauto. }
-    eapply sim_vis; ss. ii. des. clear_tac. inv STEP; simpl_depind; clarify.
-    esplits; et.
-    { econs; eauto. }
+    (* gstep. *)
+    (* eapply sim_demonic_tgt; ss. i. inv STEP; rewrite bind_trigger in *; simpl_depind; clarify. esplits. *)
+    (* eapply sim_demonic_src; ss. esplits; ss. { econs; eauto. } *)
+    (* unfold guarantee. irw. *)
+    (* eapply sim_demonic_tgt; ss. i. inv STEP; simpl_depind; clarify. esplits. *)
+    (* eapply sim_demonic_src; ss. esplits; ss. { econs; eauto. } *)
+    (* eapply sim_vis; ss. ii. des. clear_tac. inv STEP; simpl_depind; clarify. *)
+    (* esplits; et. *)
+    (* { econs; eauto. } *)
     gbase. eapply CIH. hexploit SIM; et.
   }
   {
