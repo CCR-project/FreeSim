@@ -22,8 +22,8 @@ Section COMMON.
 
   Variant obs_step (args: string * Any.t * (Any.t -> Prop)) (r: ITR -> Prop): ITR -> Prop :=
     | obs_step_syscall
-        fn varg rvs v ktr
-        (REL: r (ktr v))
+        fn varg rvs ktr
+        (REL: forall v, r (ktr v))
         (ARGS: args = (fn, varg, rvs))
       :
       obs_step args r (trigger (SyscallOut fn varg rvs) >>= ktr)
@@ -77,6 +77,13 @@ Section COMMON.
     (obs_step args r0 itr) -> (obs_step args r1 itr).
   Proof. i. inv H. econs; eauto. Qed.
 
+  Lemma obs_step_in_mon
+        args (r0 r1: ITR -> Prop) itr
+        (MON: forall itr, (r0 itr) -> (r1 itr))
+    :
+    (obs_step_in args r0 itr) -> (obs_step_in args r1 itr).
+  Proof. i. inv H. econs; eauto. Qed.
+
   Lemma event_step_mon
         X (x: X) (r0 r1: ITR -> Prop) itr
         (MON: forall itr, (r0 itr) -> (r1 itr))
@@ -112,40 +119,6 @@ Section SRCSTEPS.
       st_step r (trigger (Take X) >>= ktr)
   .
 
-  Inductive st_star (r: ITR -> Prop): ITR -> Prop :=
-  | st_star_base itr (REL: r itr): st_star r itr
-  | st_star_step itr (REL: st_step (fun ktr => st_star r ktr) itr): st_star r itr
-  .
-
-  Definition src_step (r: ARGS -> ITR -> Prop):
-    ITR -> Prop :=
-    fun itr =>
-      (<<TAU: st_step (r None) itr>>) \/
-        (<<OBS: exists arg, forall v, obs_step (arg, v) (r (Some (arg, v))) itr>>)
-  .
-
-  Inductive src_star (r: ARGS -> ITR -> Prop): ARGS -> ITR -> Prop :=
-  | src_star_base
-      args itr
-      (REL: r args itr)
-    :
-    src_star r args itr
-  | src_star_step_tau
-      itr
-      (REL: src_step (fun args1 ktr => src_star r args1 ktr) itr)
-    :
-    src_star r None itr
-  | src_star_step_obs
-      args0 itr
-      (REL: st_step (fun ktr => src_star r (Some args0) ktr) itr)
-    :
-    src_star r (Some args0) itr
-  .
-
-  Definition src_plus (r: ARGS -> ITR -> Prop): ITR -> Prop :=
-    (src_step (fun args ktr => src_star r args ktr))
-  .
-
   (* properties *)
   Lemma st_step_mon
         (r0 r1: ITR -> Prop) itr
@@ -154,92 +127,6 @@ Section SRCSTEPS.
     (st_step r0 itr) -> (st_step r1 itr).
   Proof.
     i. inv H; econs; eauto. des. eauto.
-  Qed.
-
-  Lemma st_star_ind2 (r: ITR -> Prop) (P: ITR -> Prop)
-        (BASE: forall itr (REL: r itr), P itr)
-        (STEP: forall itr (REL: st_step (fun ktr => (<<STAR: st_star r ktr>>) /\ (<<IH: P ktr>>)) itr),
-            P itr)
-    :
-    forall itr (STAR: st_star r itr), P itr.
-  Proof.
-    fix IH 2. i. inv STAR. eauto.
-    eapply STEP. inv REL.
-    { econs 1. split; auto. }
-    { econs 2. des. exists x. split; auto. }
-    { econs 3. i. split; auto. }
-  Qed.
-
-  Lemma st_star_mon
-        (r0 r1: ITR -> Prop) itr
-        (MON: forall itr, (r0 itr) -> (r1 itr))
-    :
-    (st_star r0 itr) -> (st_star r1 itr).
-  Proof.
-    i. induction H using st_star_ind2. econs 1; eauto.
-    econs 2. eapply st_step_mon. 2: eauto. i; ss. des. auto.
-  Qed.
-
-  Lemma src_step_mon
-        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop) itr
-        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
-    :
-    (src_step r0 itr) -> (src_step r1 itr).
-  Proof.
-    i. inv H.
-    - econs 1. eapply st_step_mon. 2: eauto. eauto.
-    - des. econs 2. exists arg. i. eapply obs_step_mon. 2: eauto. eauto.
-  Qed.
-
-  Lemma src_star_ind2 (r: ARGS -> ITR -> Prop) (P: ARGS -> ITR -> Prop)
-        (BASE: forall args itr (REL: r args itr), P args itr)
-        (TAU: forall itr
-                (REL: src_step (fun args1 ktr => (<<STAR: src_star r args1 ktr>>) /\
-                                                (<<IH: P args1 ktr>>)) itr),
-            P None itr)
-        (OBS: forall args0 itr
-                (REL: st_step (fun ktr => (<<STAR: src_star r (Some args0) ktr>>) /\
-                                         (<<IH: P (Some args0) ktr>>)) itr),
-            P (Some args0) itr)
-    :
-    forall args itr (STAR: src_star r args itr), P args itr.
-  Proof.
-    fix IH 3. i. inv STAR. eauto.
-    - eapply TAU. inv REL.
-      + left. inv H.
-        { econs 1. split; auto. }
-        { econs 2. des. exists x. split; auto. }
-        { econs 3. i. split; auto. }
-      + des. right. exists arg. i. specialize (H v). inv H. clarify. econs; eauto.
-    - eapply OBS. inv REL.
-      { econs 1. split; auto. }
-      { econs 2. des. exists x. split; auto. }
-      { econs 3. i. split; auto. }
-  Qed.
-
-  Lemma src_star_mon
-        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop)
-        args itr
-        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
-    :
-    (src_star r0 args itr) -> (src_star r1 args itr).
-  Proof.
-    i. induction H using src_star_ind2. econs 1; eauto.
-    - econs 2. eapply src_step_mon. 2: eauto. i; ss. des. auto.
-    - econs 3. eapply st_step_mon. 2: eauto. i; ss. des. auto.
-  Qed.
-
-  Lemma src_plus_mon
-        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop) itr
-        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
-    :
-    (src_plus r0 itr) -> (src_plus r1 itr).
-  Proof.
-    i. inv H.
-    - econs 1. eapply st_step_mon. 2: eauto. i; ss.
-      eapply src_star_mon. 2: eauto. i; ss. auto.
-    - des. econs 2. exists arg. i. eapply obs_step_mon. 2: eauto. i; ss.
-      eapply src_star_mon. 2: eauto. i; ss. auto.
   Qed.
 
 End SRCSTEPS.
@@ -270,40 +157,6 @@ Section TGTSTEPS.
       tt_step r (trigger (Take X) >>= ktr)
   .
 
-  Inductive tt_star (r: ITR -> Prop): ITR -> Prop :=
-  | tt_star_base itr (REL: r itr): tt_star r itr
-  | tt_star_step itr (REL: tt_step (fun ktr => tt_star r ktr) itr): tt_star r itr
-  .
-
-  Definition tgt_step (r: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop):
-    ITR -> Prop :=
-    fun itr =>
-      (<<TAU: tt_step (r None) itr>>) \/
-        (<<OBS: exists arg, forall v, obs_step (arg, v) (r (Some (arg, v))) itr>>)
-  .
-
-  Inductive tgt_star (r: ARGS -> ITR -> Prop): ARGS -> ITR -> Prop :=
-  | tgt_star_base
-      args itr
-      (REL: r args itr)
-    :
-    tgt_star r args itr
-  | tgt_star_step_tau
-      itr
-      (REL: tgt_step (fun args1 ktr => tgt_star r args1 ktr) itr)
-    :
-    tgt_star r None itr
-  | tgt_star_step_obs
-      args0 itr
-      (REL: tt_step (fun ktr => tgt_star r (Some args0) ktr) itr)
-    :
-    tgt_star r (Some args0) itr
-  .
-
-  Definition tgt_plus (r: ARGS -> ITR -> Prop): ITR -> Prop :=
-    (tgt_step (fun args ktr => tgt_star r args ktr))
-  .
-
   (* properties *)
   Lemma tt_step_mon
         (r0 r1: ITR -> Prop) itr
@@ -312,92 +165,6 @@ Section TGTSTEPS.
     (tt_step r0 itr) -> (tt_step r1 itr).
   Proof.
     i. inv H; econs; eauto. des. eauto.
-  Qed.
-
-  Lemma tt_star_ind2 (r: ITR -> Prop) (P: ITR -> Prop)
-        (BASE: forall itr (REL: r itr), P itr)
-        (STEP: forall itr (REL: tt_step (fun ktr => (<<STAR: tt_star r ktr>>) /\ (<<IH: P ktr>>)) itr),
-            P itr)
-    :
-    forall itr (STAR: tt_star r itr), P itr.
-  Proof.
-    fix IH 2. i. inv STAR. eauto.
-    eapply STEP. inv REL.
-    { econs 1. split; auto. }
-    { econs 2. i. split; auto. }
-    { econs 3. des. exists x. split; auto. }
-  Qed.
-
-  Lemma tt_star_mon
-        (r0 r1: ITR -> Prop) itr
-        (MON: forall itr, (r0 itr) -> (r1 itr))
-    :
-    (tt_star r0 itr) -> (tt_star r1 itr).
-  Proof.
-    i. induction H using tt_star_ind2. econs 1; eauto.
-    econs 2. eapply tt_step_mon. 2: eauto. i; ss. des. auto.
-  Qed.
-
-  Lemma tgt_step_mon
-        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop) itr
-        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
-    :
-    (tgt_step r0 itr) -> (tgt_step r1 itr).
-  Proof.
-    i. inv H.
-    - econs 1. eapply tt_step_mon. 2: eauto. eauto.
-    - des. econs 2. exists arg. i. eapply obs_step_mon. 2: eauto. eauto.
-  Qed.
-
-  Lemma tgt_star_ind2 (r: ARGS -> ITR -> Prop) (P: ARGS -> ITR -> Prop)
-        (BASE: forall args itr (REL: r args itr), P args itr)
-        (TAU: forall itr
-                (REL: tgt_step (fun args1 ktr => (<<STAR: tgt_star r args1 ktr>>) /\
-                                                (<<IH: P args1 ktr>>)) itr),
-            P None itr)
-        (OBS: forall args0 itr
-                (REL: tt_step (fun ktr => (<<STAR: tgt_star r (Some args0) ktr>>) /\
-                                         (<<IH: P (Some args0) ktr>>)) itr),
-            P (Some args0) itr)
-    :
-    forall args itr (STAR: tgt_star r args itr), P args itr.
-  Proof.
-    fix IH 3. i. inv STAR. eauto.
-    - eapply TAU. inv REL.
-      + left. inv H.
-        { econs 1. split; auto. }
-        { econs 2. i. split; auto. }
-        { econs 3. des. exists x. split; auto. }
-      + des. right. exists arg. i. specialize (H v). inv H. clarify. econs; eauto.
-    - eapply OBS. inv REL.
-      { econs 1. split; auto. }
-      { econs 2. i. split; auto. }
-      { econs 3. des. exists x. split; auto. }
-  Qed.
-
-  Lemma tgt_star_mon
-        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop)
-        args itr
-        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
-    :
-    (tgt_star r0 args itr) -> (tgt_star r1 args itr).
-  Proof.
-    i. induction H using tgt_star_ind2. econs 1; eauto.
-    - econs 2. eapply tgt_step_mon. 2: eauto. i; ss. des. auto.
-    - econs 3. eapply tt_step_mon. 2: eauto. i; ss. des. auto.
-  Qed.
-
-  Lemma tgt_plus_mon
-        (r0 r1: (option (string * Any.t * (Any.t -> Prop) * Any.t)) -> ITR -> Prop) itr
-        (MON: forall args itr, (r0 args itr) -> (r1 args itr))
-    :
-    (tgt_plus r0 itr) -> (tgt_plus r1 itr).
-  Proof.
-    i. inv H.
-    - econs 1. eapply tt_step_mon. 2: eauto. i; ss.
-      eapply tgt_star_mon. 2: eauto. i; ss. auto.
-    - des. econs 2. exists arg. i. eapply obs_step_mon. 2: eauto. i; ss.
-      eapply tgt_star_mon. 2: eauto. i; ss. auto.
   Qed.
 
 End TGTSTEPS.
@@ -415,11 +182,11 @@ Section EXP_SIM.
       \/
         (exists arg,
             ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
-              (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+              ((<<OBS: obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (exists arg,
             ((is_obs_in arg itr_src) /\ (is_obs_in arg itr_tgt)) /\
-              ((<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+              ((<<OBS: obs_step_in (arg) (fun ktr_tgt => obs_step_in (arg) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (exists X (e: E X),
             ((is_event e itr_src) /\ (is_event e itr_tgt)) /\
@@ -444,10 +211,13 @@ Section EXP_SIM.
   Proof.
     ii. inv IN.
     { left. eauto. }
-    right. des; [left | right; left | do 2 right; left | do 2 right; right].
-    { exists arg. splits; auto. i. specialize (H0 _ _ EQ). eapply obs_step_mon; [|eauto]. i; ss.
+    right. des; [left | right; left | do 2 right; left | do 3 right; left | repeat right].
+    { exists arg. splits; auto. eapply obs_step_mon; [|eauto]. i; ss.
       eapply obs_step_mon; [|eauto]. i; ss. des; eauto.
-    }    
+    }
+    { exists arg. splits; auto. eapply obs_step_in_mon; [|eauto]. i; ss.
+      eapply obs_step_in_mon; [|eauto]. i; ss. des; eauto.
+    }
     { exists X, e. splits; auto. i. specialize (H0 _ _ EQ). eapply event_step_mon; [|eauto]. i; ss.
       eapply event_step_mon; [|eauto]. i; ss. des; eauto.
     }    
@@ -484,7 +254,11 @@ Section IMP_SIM.
         \/
           (exists arg,
               ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
-                (forall rs rt (EQ: rs = rt), (<<OBS: obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+                (<<OBS: obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>))
+        \/
+          (exists arg,
+              ((is_obs_in arg itr_src) /\ (is_obs_in arg itr_tgt)) /\
+                (<<OBS: obs_step_in (arg) (fun ktr_tgt => obs_step_in (arg) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>))
         \/
           (exists X (e: E X),
               ((is_event e itr_src) /\ (is_event e itr_tgt)) /\
@@ -517,8 +291,15 @@ Section IMP_SIM.
             itr_src itr_tgt arg
             (SRC: is_obs arg itr_src)
             (TGT: is_obs arg itr_tgt)
-            (SIM: forall rs rt (EQ: rs = rt),
-                obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            (SIM:
+              obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            P itr_src itr_tgt)
+        (OBSIN: forall
+            itr_src itr_tgt arg
+            (SRC: is_obs_in arg itr_src)
+            (TGT: is_obs_in arg itr_tgt)
+            (SIM:
+              obs_step_in (arg) (fun ktr_tgt => obs_step_in (arg) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
             P itr_src itr_tgt)
         (EVE: forall
             X (e: E X) itr_src itr_tgt
@@ -543,6 +324,7 @@ Section IMP_SIM.
     fix IH 3. i. inv SIM. des.
     { eapply RET; eauto. }
     { eapply OBS; eauto. }
+    { eapply OBSIN; eauto. }
     { eapply EVE; eauto. }
     { eapply TGT; eauto. inv TGT0.
       - econs 1. des; [left|right]; eauto.
@@ -562,16 +344,19 @@ Section IMP_SIM.
   Proof.
     ii. induction IN using _simg_alt_imp_ind2.
     { econs. left; eauto. }
-    { econs. right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+    { econs. right; left. esplits; eauto. i.
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs. do 2 right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+    { econs. do 2 right; left. esplits; eauto. i.
+      eapply obs_step_in_mon; [|eauto]. i; ss. eapply obs_step_in_mon; [|eauto]. i; ss. auto.
+    }
+    { econs. do 3 right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
       eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs. do 3 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
+    { econs. do 4 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
       eapply st_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs. do 3 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
+    { econs. do 5 right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right]; auto.
       eapply tt_step_mon; [|eauto]. i; ss. auto.
     }
   Qed.
@@ -593,8 +378,16 @@ Section IMP_SIM.
         itr_src itr_tgt arg
         (SRC: is_obs arg itr_src)
         (TGT: is_obs arg itr_tgt)
-        (SIM: forall rs rt (EQ: rs = rt),
-            obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
+        (SIM:
+            obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
+      :
+      simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
+    | simg_alt_imp_indC_obs_in
+        itr_src itr_tgt arg
+        (SRC: is_obs_in arg itr_src)
+        (TGT: is_obs_in arg itr_tgt)
+        (SIM:
+            obs_step_in (arg) (fun ktr_tgt => obs_step_in (arg) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
       :
       simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
     | simg_alt_imp_indC_event
@@ -621,16 +414,19 @@ Section IMP_SIM.
   Proof.
     ii. inv IN.
     { econs 1; eauto. }
-    { econs 2; eauto. i. specialize (SIM _ _ EQ).
+    { econs 2; eauto. i.
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs 3; eauto. i. specialize (SIM _ _ EQ).
+    { econs 3; eauto. i.
+      eapply obs_step_in_mon; [|eauto]. i; ss. eapply obs_step_in_mon; [|eauto]. i; ss. auto.
+    }
+    { econs 4; eauto. i. specialize (SIM _ _ EQ).
       eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs 4; eauto. eapply tt_step_mon; [|eauto]. i; ss. des; eauto. left.
+    { econs 5; eauto. eapply tt_step_mon; [|eauto]. i; ss. des; eauto. left.
       eapply st_step_mon; [|eauto]. i; ss. auto.
     }
-    { econs 5; eauto. eapply st_step_mon; [|eauto]. i; ss. des; eauto. left.
+    { econs 6; eauto. eapply st_step_mon; [|eauto]. i; ss. des; eauto. left.
       eapply tt_step_mon; [|eauto]. i; ss. auto.
     }
   Qed.
@@ -642,19 +438,23 @@ Section IMP_SIM.
     eapply wrespect5_uclo; eauto with paco.
     econs; eauto with paco. i. inv PR.
     { econs. left; eauto. }
-    { econs. right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+    { econs. right; left. esplits; eauto. i.
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
       apply rclo5_base. auto.
     }
-    { econs. do 2 right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
+    { econs. do 2 right; left. esplits; eauto. i.
+      eapply obs_step_in_mon; [|eauto]. i; ss. eapply obs_step_in_mon; [|eauto]. i; ss.
+      apply rclo5_base. auto.
+    }
+    { econs. do 3 right; left. esplits; eauto. i. specialize (SIM _ _ EQ).
       eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss.
       apply rclo5_base. auto.
     }
-    { econs. do 3 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right].
+    { econs. do 4 right; left. eapply tt_step_mon; [|eauto]. i; ss. des; [left|right].
       - eapply st_step_mon; [|eauto]. i; ss. apply rclo5_base. auto.
       - eapply simg_alt_imp_mon; eauto. i. apply rclo5_base; auto.
     }
-    { econs. do 3 right; right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right].
+    { econs. do 5 right. eapply st_step_mon; [|eauto]. i; ss. des; [left|right].
       - eapply tt_step_mon; [|eauto]. i; ss. apply rclo5_base. auto.
       - eapply simg_alt_imp_mon; eauto. i. apply rclo5_base; auto.
     }
@@ -672,8 +472,15 @@ Section IMP_SIM.
             itr_src itr_tgt arg
             (SRC: is_obs arg itr_src)
             (TGT: is_obs arg itr_tgt)
-            (SIM: forall rs rt (EQ: rs = rt),
-                obs_step (arg, rt) (fun ktr_tgt => obs_step (arg, rs) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            (SIM:
+                obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            P itr_src itr_tgt)
+        (OBSIN: forall
+            itr_src itr_tgt arg
+            (SRC: is_obs_in arg itr_src)
+            (TGT: is_obs_in arg itr_tgt)
+            (SIM:
+                obs_step_in (arg) (fun ktr_tgt => obs_step_in (arg) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
             P itr_src itr_tgt)
         (EVE: forall
             X (e: E X) itr_src itr_tgt
@@ -697,8 +504,12 @@ Section IMP_SIM.
   Proof.
     i. punfold SIM. induction SIM using _simg_alt_imp_ind2; i; clarify.
     { eapply RET; eauto. }
-    { eapply OBS; eauto. i. specialize (SIM _ _ EQ).
+    { eapply OBS; eauto. i.
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
+      pclearbot. eauto.
+    }
+    { eapply OBSIN; eauto. i.
+      eapply obs_step_in_mon; [|eauto]. i; ss. eapply obs_step_in_mon; [|eauto]. i; ss.
       pclearbot. eauto.
     }
     { eapply EVE; eauto. i. specialize (SIM _ _ EQ).

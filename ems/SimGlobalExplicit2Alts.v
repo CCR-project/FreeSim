@@ -53,37 +53,37 @@ Section PROOF.
     { right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
       gstep. right. left. exists (fn, varg, rvs). splits; [econs; eauto| econs; eauto |].
-      i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
+      i.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt1, f_src1)). gfinal. left. eapply CIH; eauto.
+      specialize (SIM0 v0 v eq_refl). pclearbot. eapply SIM0.
     }
     { right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
-      gstep. right. left. exists (fn, varg, rvs). splits; [econs; eauto| econs; eauto |].
-      i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
-      econs; eauto. econs; eauto.
-      exists (Some (f_tgt1, f_src1)). gfinal. left. eapply CIH; eauto.
+      gstep. do 2 right. left. pclearbot. exists (rv). splits; [econs; eauto| econs; eauto |].
+      i.
+      econs; eauto.
     }
     { pclearbot. right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
-      gstep. do 3 right. right. econs 1. eapply IHs; eauto.
+      gstep. do 4 right. right. econs 1. eapply IHs; eauto.
     }
     { pclearbot. left. econs 1. exists (Some (f_tgt1, f_src1)). gfinal. left. auto. }
     { des. pclearbot. right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
-      gstep. do 3 right. right. econs 2. exists x. eapply IHs; eauto.
+      gstep. do 4 right. right. econs 2. exists x. eapply IHs; eauto.
     }
     { pclearbot. left. econs 2. i. specialize (SIM0 x).
       exists (Some (f_tgt1, f_src1)). gfinal. left. auto.
     }
     { pclearbot. right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
-      gstep. do 3 right. right. econs 3. i. specialize (SIM0 x). eapply IHs; eauto.
+      gstep. do 4 right. right. econs 3. i. specialize (SIM0 x). eapply IHs; eauto.
     }
     { des. pclearbot. left. econs 3. exists x. i. exists (Some (f_tgt1, f_src1)). gfinal. left. auto. }
     { right. exists (Some (f_tgt, f_src0)). split.
       2:{ econs. econs 2; eauto. }
-      gstep. do 2 right. left. exists X, e. splits; [econs; eauto| econs; eauto |].
+      gstep. do 3 right. left. exists X, e. splits; [econs; eauto| econs; eauto |].
       i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt1, f_src1)). gfinal. left. eapply CIH; eauto.
@@ -108,41 +108,46 @@ Section PROOF.
     punfold SIM. inv SIM.
     { gstep. left. esplits; eauto. all: econs; eauto. }
     { gstep. right. left. exists (fn, varg, rvs). splits; [econs; eauto | econs; eauto |].
-      i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
+      i.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt0, f_src0)). gfinal. left. eapply CIH; eauto.
+      specialize (SIM0 tt↑ tt↑ eq_refl). pclearbot. eapply SIM0.
+    }
+    { gstep. do 2 right. left. exists (rv). splits; [econs; eauto | econs; eauto |].
+      i.
+      econs; eauto.
     }
     { destruct SIM0 as [SIM | SIM]; clarify.
-      gstep. do 3 right. right. econs 1.
+      gstep. do 4 right. right. econs 1.
       eapply src_aux; eauto.
     }
     { destruct SIM0 as [SIM | SIM]; clarify.
-      gstep. do 3 right. left. econs 1.
+      gstep. do 4 right. left. econs 1.
       right. exists (Some (f_tgt0, f_src0)). split.
       2:{ econs. econs 1; auto. }
       gfinal. left; eauto.
     }
     { des. destruct SIM0 as [SIM | SIM]; clarify.
-      gstep. do 3 right. right. econs 2. exists x.
+      gstep. do 4 right. right. econs 2. exists x.
       eapply src_aux; eauto.
     }
-    { gstep. do 3 right. left. econs 2. i.
+    { gstep. do 4 right. left. econs 2. i.
       right. exists (Some (f_tgt0, f_src0)). split.
       2:{ econs. econs 1; auto. }
       destruct (SIM0 x) as [SIM | SIM]; clarify.
       gfinal. left; eauto.
     }
-    { gstep. do 3 right. right. econs 3. i.
+    { gstep. do 4 right. right. econs 3. i.
       destruct (SIM0 x) as [SIM | SIM]; clarify.
       eapply src_aux; eauto.
     }
     { des. destruct SIM0 as [SIM | SIM]; clarify.
-      gstep. do 3 right. left. econs 3. exists x.
+      gstep. do 4 right. left. econs 3. exists x.
       right. exists (Some (f_tgt0, f_src0)). split.
       2:{ econs. econs 1; auto. }
       gfinal. left; eauto.
     }
-    { gstep. do 2 right. left. exists X, e. splits; [econs; eauto | econs; eauto |].
+    { gstep. do 3 right. left. exists X, e. splits; [econs; eauto | econs; eauto |].
       i. specialize (SIM0 _ _ EQ). pclearbot; clarify.
       econs; eauto. econs; eauto.
       exists (Some (f_tgt0, f_src0)). gfinal. left. eapply CIH; eauto.
@@ -172,20 +177,24 @@ Section PROOF.
     punfold SIM. inv SIM.
     { pfold. econs. left. eauto. }
     des.
-    { pfold. econs. right; left. esplits; eauto. i. specialize (H0 _ _ EQ).
+    { pfold. econs. right; left. esplits; eauto. i.
       eapply obs_step_mon; [|eauto]. i; ss. eapply obs_step_mon; [|eauto]. i; ss.
-      des. destruct H3; clarify. right. eapply CIH; eauto.
+      des. pclearbot; clarify. right. eapply CIH; eauto.
     }
-    { pfold. econs. do 2 right; left. esplits; eauto. i. specialize (H0 _ _ EQ).
+    { pfold. econs. do 2 right; left. esplits; eauto. i.
+      eapply obs_step_in_mon; [|eauto]. i; ss. eapply obs_step_in_mon; [|eauto]. i; ss.
+      des. pclearbot; clarify. right. eapply CIH; eauto.
+    }
+    { pfold. econs. do 3 right; left. esplits; eauto. i. specialize (H0 _ _ EQ).
       eapply event_step_mon; [|eauto]. i; ss. eapply event_step_mon; [|eauto]. i; ss.
       des. destruct H3; clarify. right. eapply CIH; eauto.
     }
-    { pfold. econs. do 3 right; left.
+    { pfold. econs. do 4 right; left.
       eapply tt_step_mon; [|eauto]. i; ss. des; [left | right].
       - eapply st_step_mon; [|eauto]. i; ss. des. right. destruct H0; clarify. eauto.
       - destruct H; clarify. specialize (IHe _ H0 _ _ H). punfold IHe.
     }
-    { pfold. econs. do 3 right; right.
+    { pfold. econs. do 4 right; right.
       eapply st_step_mon; [|eauto]. i; ss. des; [left | right].
       - eapply tt_step_mon; [|eauto]. i; ss. des. right. destruct H0; clarify. eauto.
       - destruct H; clarify. specialize (IHe _ H0 _ _ H). punfold IHe.
