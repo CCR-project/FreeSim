@@ -65,6 +65,12 @@ Proof.
       { gbase. eapply CIH. }
       { eapply Ord.S_lt. }
       { eapply Ord.S_lt. }
+    + rewrite <- ! bind_trigger.
+      guclo simg_indC_spec. econs; eauto. i. subst.
+      gstep. econs; eauto.
+      { gbase. eapply CIH. }
+      { eapply Ord.S_lt. }
+      { eapply Ord.S_lt. }
 Qed.
 
 Variant postcondC (r: forall S0 S1 (SS: Ord.t -> Ord.t -> S0 -> S1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) S0) -> (itree (E +' eventE) S1) -> Prop):
@@ -95,6 +101,7 @@ Proof.
   rename x2 into RR1.
   induction SIM using _simg_ind2; i; clarify.
   - econs; eauto.
+  - econs; eauto. i. subst. eapply rclo7_clo'; eauto. econs; eauto. eapply rclo7_base. eauto.
   - econs; eauto. i. subst. eapply rclo7_clo'; eauto. econs; eauto. eapply rclo7_base. eauto.
   - econs; eauto.
   - econs; eauto.
@@ -164,17 +171,18 @@ Proof.
   revert x3 x4 SRC TGT. induction SIM using _simg_ind2; i; clarify.
   { econs 1. 3: eauto. all: etrans; eauto. }
   { econs 2; eauto. i. eapply rclo7_base; eauto. }
-  { econs 3; eauto. eapply IHSIM; et. refl. }
+  { econs 3; eauto. i. eapply rclo7_base; eauto. }
   { econs 4; eauto. eapply IHSIM; et. refl. }
-  { econs 5; eauto. des. esplits; eauto. eapply IH; et. refl. }
-  { econs 6; eauto. i. hexploit SIM; eauto. i. des. eapply IH; et. refl. }
+  { econs 5; eauto. eapply IHSIM; et. refl. }
+  { econs 6; eauto. des. esplits; eauto. eapply IH; et. refl. }
   { econs 7; eauto. i. hexploit SIM; eauto. i. des. eapply IH; et. refl. }
-  { econs 8; eauto. des. esplits; eauto. eapply IH; et. refl. }
-  { econs 9; eauto.
+  { econs 8; eauto. i. hexploit SIM; eauto. i. des. eapply IH; et. refl. }
+  { econs 9; eauto. des. esplits; eauto. eapply IH; et. refl. }
+  { econs 10; eauto.
     - eapply rclo7_clo_base. econs; try apply SIM; et; try refl.
     - eapply Ord.lt_le_lt; et.
     - eapply Ord.lt_le_lt; et. }
-  { econs 10; eauto. i. eapply rclo7_base; eauto. }
+  { econs 11; eauto. i. eapply rclo7_base; eauto. }
 Qed.
 
 Lemma flagC_spec: flagC <8= gupaco7 (_simg (E:=E)) (cpn7 (_simg (E:=E))).
@@ -194,16 +202,17 @@ Proof.
   revert f_src1 f_tgt1 SRC TGT. induction SIM using _simg_ind2; i.
   { econs 1. 3: eauto. all: etrans; eauto. }
   { econs 2; eauto. }
-  { econs 3; eauto. eapply IHSIM; et. refl. }
+  { econs 3; eauto. }
   { econs 4; eauto. eapply IHSIM; et. refl. }
-  { econs 5; eauto. des. esplits; eauto. eapply IH; et. refl. }
-  { econs 6; eauto. i. hexploit SIM; eauto. i. des. eauto. eapply IH; et. refl. }
+  { econs 5; eauto. eapply IHSIM; et. refl. }
+  { econs 6; eauto. des. esplits; eauto. eapply IH; et. refl. }
   { econs 7; eauto. i. hexploit SIM; eauto. i. des. eauto. eapply IH; et. refl. }
-  { econs 8; eauto. des. esplits; eauto. eapply IH; et. refl. }
-  { econs 9; eauto.
+  { econs 8; eauto. i. hexploit SIM; eauto. i. des. eauto. eapply IH; et. refl. }
+  { econs 9; eauto. des. esplits; eauto. eapply IH; et. refl. }
+  { econs 10; eauto.
     - eapply Ord.lt_le_lt; et.
     - eapply Ord.lt_le_lt; et. }
-  { econs 10; eauto. }
+  { econs 11; eauto. }
 Qed.
 
 (* Lemma simg_progress_flag R0 R1 RR r g itr_src itr_tgt *)
@@ -281,6 +290,9 @@ Proof.
   { rewrite ! bind_bind. econs; eauto. ii.
     { econs 2; eauto with paco. econs; eauto with paco. }
   }
+  { rewrite ! bind_bind. econs; eauto. ii.
+    { econs 2; eauto with paco. econs; eauto with paco. }
+  }
   { rewrite ! bind_tau. econs; eauto. }
   { rewrite ! bind_tau. econs; eauto. }
   { rewrite ! bind_bind. econs; eauto. des. esplits; et. }
@@ -288,7 +300,7 @@ Proof.
   { rewrite ! bind_bind. econs; eauto. i. hexploit SIM; eauto. i. des. eauto. }
   { rewrite ! bind_bind. econs; eauto. des. esplits; et. }
   { clarify. econs; eauto. eapply rclo7_clo_base. econs; eauto. }
-  { rewrite ! bind_bind. econs 10; eauto. ii.
+  { rewrite ! bind_bind. econs 11; eauto. ii.
     { econs 2; eauto with paco. econs; eauto with paco. }
   }
 Qed.
@@ -313,6 +325,7 @@ Proof.
     dependent destruction H0. ired. et.  }
   { eapply f_equal with (f:=observe) in H0. ss. }
   { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss. }
 Qed.
 
 Lemma step_trigger_take_iff X k itr e
@@ -327,6 +340,7 @@ Proof.
   { eapply f_equal with (f:=observe) in H0. ss.
     unfold trigger in H0. ss. cbn in H0.
     dependent destruction H0. ired. et.  }
+  { eapply f_equal with (f:=observe) in H0. ss. }
   { eapply f_equal with (f:=observe) in H0. ss. }
 Qed.
 
@@ -346,20 +360,20 @@ Proof.
   inv STEP.
 Qed.
 
-Lemma step_trigger_syscall_iff fn args rvs k e itr
-      (STEP: ModSemL.step (trigger (Syscall fn args rvs) >>= k) e itr)
-  :
-    exists rv, itr = k rv /\ e = Some (event_sys fn args rv)
-               /\ <<RV: rvs rv>> /\ <<SYS: syscall_sem (event_sys fn args rv)>>.
-Proof.
-  inv STEP.
-  { eapply f_equal with (f:=observe) in H0. ss. }
-  { eapply f_equal with (f:=observe) in H0. ss. }
-  { eapply f_equal with (f:=observe) in H0. ss. }
-  { eapply f_equal with (f:=observe) in H0. ss.
-    unfold trigger in H0. ss. cbn in H0.
-    dependent destruction H0. ired. et. }
-Qed.
+(* Lemma step_trigger_syscall_iff fn args rvs k e itr *)
+(*       (STEP: ModSemL.step (trigger (Syscall fn args rvs) >>= k) e itr) *)
+(*   : *)
+(*     exists rv, itr = k rv /\ e = Some (event_sys fn args rv) *)
+(*                /\ <<RV: rvs rv>> /\ <<SYS: syscall_sem (event_sys fn args rv)>>. *)
+(* Proof. *)
+(*   inv STEP. *)
+(*   { eapply f_equal with (f:=observe) in H0. ss. } *)
+(*   { eapply f_equal with (f:=observe) in H0. ss. } *)
+(*   { eapply f_equal with (f:=observe) in H0. ss. } *)
+(*   { eapply f_equal with (f:=observe) in H0. ss. *)
+(*     unfold trigger in H0. ss. cbn in H0. *)
+(*     dependent destruction H0. ired. et. } *)
+(* Qed. *)
 
 
 Lemma itree_eta_eq A R (itr0 itr1: itree A R)
@@ -400,20 +414,20 @@ Proof.
     extensionality x0. eapply itree_eta_eq. ss. }
 Qed.
 
-Lemma step_trigger_syscall fn args (rvs: Any.t -> Prop) k rv
-      (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
-  :
-    ModSemL.step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).
-Proof.
-  unfold trigger. ss.
-  match goal with
-  | [ |- ModSemL.step ?itr _ _] =>
-    replace itr with (Subevent.vis (Syscall fn args rvs) k)
-  end; ss.
-  { econs; et. }
-  { eapply itree_eta_eq. ss. cbv. f_equal.
-    extensionality x0. eapply itree_eta_eq. ss. }
-Qed.
+(* Lemma step_trigger_syscall fn args (rvs: Any.t -> Prop) k rv *)
+(*       (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv)) *)
+(*   : *)
+(*     ModSemL.step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv). *)
+(* Proof. *)
+(*   unfold trigger. ss. *)
+(*   match goal with *)
+(*   | [ |- ModSemL.step ?itr _ _] => *)
+(*     replace itr with (Subevent.vis (Syscall fn args rvs) k) *)
+(*   end; ss. *)
+(*   { econs; et. } *)
+(*   { eapply itree_eta_eq. ss. cbv. f_equal. *)
+(*     extensionality x0. eapply itree_eta_eq. ss. } *)
+(* Qed. *)
 
 Lemma step_tau itr
   :
@@ -453,6 +467,10 @@ Proof.
       guclo simg_indC_spec. econsr; eauto.
       instantiate (1:=1). instantiate (1:=1).
       esplits. gstep. econs; eauto; try (instantiate (1:=0); eapply OrdArith.lt_from_nat; lia).
+      gbase. eapply CIH. pclearbot. eauto.
+    + guclo simg_indC_spec. econs; eauto. i. subst.
+      instantiate (1:=1). instantiate (1:=1).
+      gstep. econs; eauto; try (instantiate (1:=0); eapply OrdArith.lt_from_nat; lia).
       gbase. eapply CIH. pclearbot. eauto.
     + guclo simg_indC_spec. econs; eauto. i. subst.
       instantiate (1:=1). instantiate (1:=1).
@@ -574,6 +592,14 @@ Proof.
       eapply rclo7_base. eauto.
     - guclo simg_indC_spec.
   }
+  { punfold LEFT. red in LEFT.
+    revert SIM. dependent induction LEFT; i; des_ifs; simpl_existTs; subst; simpobs_all.
+    - rewrite bind_trigger in Heq. clarify. simpl_existTs. subst. rewrite <- bind_trigger.
+      gstep. econs; eauto. i. subst. gbase. (* eapply CIH0. *) eapply rclo7_clo. left. econs; ss; cycle 1.
+      { instantiate (1:=ktr_src0 tt). rr in REL. pclearbot. eauto. }
+      eapply rclo7_base. eauto.
+    - guclo simg_indC_spec.
+  }
   { eapply euttge_tau_inv in LEFT. des. subst.
     guclo simg_indC_spec.
   }
@@ -599,7 +625,7 @@ Proof.
   { punfold LEFT. red in LEFT.
     revert SIM. dependent induction LEFT; i; des_ifs; simpl_existTs; subst; simpobs_all.
     - rewrite bind_trigger in Heq. clarify. simpl_existTs. subst. rewrite <- bind_trigger.
-      gstep. econs 10; eauto. i. subst. gbase. (* eapply CIH0. *) eapply rclo7_clo. left. econs; ss; cycle 1.
+      gstep. econs 11; eauto. i. subst. gbase. (* eapply CIH0. *) eapply rclo7_clo. left. econs; ss; cycle 1.
       { instantiate (1:=ktr_src0 x_tgt). rr in REL. pclearbot. eauto. }
       eapply rclo7_base. eauto.
     - guclo simg_indC_spec.
@@ -653,6 +679,14 @@ Proof.
       eapply rclo7_base. eauto.
     - guclo simg_indC_spec.
   }
+  { punfold RIGHT. red in RIGHT.
+    revert SIM. dependent induction RIGHT; i; des_ifs; simpl_existTs; subst; simpobs_all.
+    - rewrite bind_trigger in Heq. clarify. simpl_existTs. subst. rewrite <- bind_trigger.
+      gstep. econs; eauto. i. subst. gbase. (* eapply CIH0. *) eapply rclo7_clo. left. econs; ss; cycle 1.
+      { instantiate (1:=ktr_tgt0 tt). rr in REL. pclearbot. eauto. }
+      eapply rclo7_base. eauto.
+    - guclo simg_indC_spec.
+  }
   { guclo simg_indC_spec. }
   { eapply euttge_tau_inv in RIGHT. des. subst.
     guclo simg_indC_spec.
@@ -678,7 +712,7 @@ Proof.
   { punfold RIGHT. red in RIGHT.
     revert SIM. dependent induction RIGHT; i; des_ifs; simpl_existTs; subst; simpobs_all.
     - rewrite bind_trigger in Heq. clarify. simpl_existTs. subst. rewrite <- bind_trigger.
-      gstep. econs 10; eauto. i. subst. gbase. (* eapply CIH0. *) eapply rclo7_clo. left. econs; ss; cycle 1.
+      gstep. econs 11; eauto. i. subst. gbase. (* eapply CIH0. *) eapply rclo7_clo. left. econs; ss; cycle 1.
       { instantiate (1:=ktr_tgt0 x_tgt). rr in REL. pclearbot. eauto. }
       eapply rclo7_base. eauto.
     - guclo simg_indC_spec.
@@ -1022,18 +1056,30 @@ Proof.
       (* { ginit. guclo flagC_spec. econs; eauto with paco; try refl. } *)
       ii. ss. esplits; et. }
     i; ss.
-  - remember (` x : _ <- trigger (Syscall fn varg rvs);; ktr_tgt0 x) as tmp. revert Heqtmp.
+  - remember (` x : _ <- trigger (SyscallOut fn varg rvs);; ktr_tgt0 x) as tmp. revert Heqtmp.
     eapply simg_bot_flag_up in SIM1.
     instantiate (1:=f3) in SIM1. instantiate (1:=f_src) in SIM1.
-    induction SIM1 using simg_ind; intros ?EQ; irw in EQ; csc.
-    + change (fun x : Any.t => ktr_src1 x) with ktr_src1 in *.
-      change (fun x : Any.t => ktr_tgt0 x) with ktr_tgt0 in *. subst.
+    induction SIM1 using simg_ind; intros ?EQ; irw in EQ; simpl_depind; csc.
+    + change (fun x => ktr_src1 x) with ktr_src1 in *.
+      change (fun x => ktr_tgt0 x) with ktr_tgt0 in *. subst.
       gstep. econs; eauto. i. subst. gbase. eapply CIH; et.
     + guclo simg_indC_spec. econs; eauto. eapply IHSIM1. irw; ss.
     + guclo simg_indC_spec. econs; eauto. i. spc SIM0. des. eapply IH. irw; ss.
     + guclo simg_indC_spec. econs; eauto. des. esplits; et. eapply IH. irw; ss.
     + gstep. econs; eauto. gbase. eapply CIH; et.
       rewrite <- bind_trigger. ginit. gstep. econs; eauto. i. subst. gfinal. right. eapply paco7_mon; try eapply SIM; ss.
+  - remember (` x : _ <- trigger (SyscallIn rv);; ktr_tgt0 x) as tmp. revert Heqtmp.
+    eapply simg_bot_flag_up in SIM1.
+    instantiate (1:=f3) in SIM1. instantiate (1:=f_src) in SIM1.
+    induction SIM1 using simg_ind; intros ?EQ; irw in EQ; simpl_depind; csc.
+    + change (fun x => ktr_src1 x) with ktr_src1 in *.
+      change (fun x => ktr_tgt0 x) with ktr_tgt0 in *. subst.
+      gstep. econs; eauto. i. subst. gbase. eapply CIH; et.
+    + guclo simg_indC_spec. econs; eauto. eapply IHSIM1. irw; ss.
+    + guclo simg_indC_spec. econs; eauto. i. spc SIM. des. eapply IH. irw; ss.
+    + guclo simg_indC_spec. econs; eauto. des. esplits; et. eapply IH. irw; ss.
+    + gstep. econs; eauto. gbase. eapply CIH; et.
+      rewrite <- bind_trigger. ginit. gstep. econs; eauto. i. subst. gfinal. right. eapply paco7_mon; try eapply SIM0; ss.
   - guclo simg_indC_spec.
   - eapply IHSIM0. eapply simg_tau_inv_l; et.
   - des. guclo simg_indC_spec.
@@ -1059,17 +1105,29 @@ Proof.
       eapply simg_ret_inv_r in SIM0.
       { gfinal. right. eapply paco7_mon; et. i; ss. }
       ss. esplits; et.
-    + remember (` x : _ <- trigger (Syscall fn varg rvs);; ktr_src0 x) as tmp. revert Heqtmp.
+    + remember (` x : _ <- trigger (SyscallOut fn varg rvs);; ktr_src0 x) as tmp. revert Heqtmp.
       rename SIM0 into T.
       eapply simg_bot_flag_up in T.
       instantiate (1:=0%ord) in T. instantiate (1:=0%ord) in T.
       remember (Ord.from_nat 0) as tmp1 in T. revert Heqtmp1.
-      induction T using simg_ind; intros ??EQ; irw in EQ; csc.
+      induction T using simg_ind; intros ??EQ; irw in EQ; simpl_depind; csc.
       * assert(ktr_tgt1 = ktr_src0) by eauto; subst.
         gstep. econs; eauto. i. subst. gbase. eapply CIH; et.
       * guclo simg_indC_spec. econs; eauto. eapply IHT; ss. irw; ss.
       * guclo simg_indC_spec. des. econs; eauto. esplits; et. eapply IH; ss. irw; ss.
       * guclo simg_indC_spec. econs; eauto. i. eapply SIM0; ss. irw; ss.
+      * exfalso. eapply Ord.lt_not_le in TGT0; auto. apply Ord.O_bot.
+    + remember (` x : _ <- trigger (SyscallIn rv);; ktr_src0 x) as tmp. revert Heqtmp.
+      rename SIM0 into T.
+      eapply simg_bot_flag_up in T.
+      instantiate (1:=0%ord) in T. instantiate (1:=0%ord) in T.
+      remember (Ord.from_nat 0) as tmp1 in T. revert Heqtmp1.
+      induction T using simg_ind; intros ??EQ; irw in EQ; simpl_depind; csc.
+      * assert(ktr_tgt1 = ktr_src0) by eauto; subst.
+        gstep. econs; eauto. i. subst. gbase. eapply CIH; et.
+      * guclo simg_indC_spec. econs; eauto. eapply IHT; ss. irw; ss.
+      * guclo simg_indC_spec. des. econs; eauto. esplits; et. eapply IH; ss. irw; ss.
+      * guclo simg_indC_spec. econs; eauto. i. eapply SIM; ss. irw; ss.
       * exfalso. eapply Ord.lt_not_le in TGT0; auto. apply Ord.O_bot.
     + eapply IHSIM1. eapply simg_tau_inv_r; et.
     + guclo simg_indC_spec.
@@ -1103,7 +1161,7 @@ Proof.
       * exfalso. eapply Ord.lt_not_le in TGT0; auto. apply Ord.O_bot.
       * assert(ktr_tgt1 = ktr_src0) by eauto; subst.
         assert (e0 = e) by eauto; subst.
-        gstep. econs 10; eauto. i. subst. gbase. eapply CIH; et.
+        gstep. econs 11; eauto. i. subst. gbase. eapply CIH; et.
   - remember (` x : _ <- trigger e;; ktr_tgt0 x) as tmp. revert Heqtmp.
     eapply simg_bot_flag_up in SIM1.
     instantiate (1:=f3) in SIM1. instantiate (1:=f_src) in SIM1.
@@ -1112,11 +1170,11 @@ Proof.
     + guclo simg_indC_spec. econs; eauto. i. spc SIM0. des. eapply IH. irw; ss.
     + guclo simg_indC_spec. econs; eauto. des. esplits; et. eapply IH. irw; ss.
     + gstep. econs; eauto. gbase. eapply CIH; et.
-      rewrite <- bind_trigger. ginit. gstep. econs 10; eauto. i. subst. gfinal. right. eapply paco7_mon; try eapply SIM; ss.
+      rewrite <- bind_trigger. ginit. gstep. econs 11; eauto. i. subst. gfinal. right. eapply paco7_mon; try eapply SIM; ss.
     + change (fun x : X => ktr_src1 x) with ktr_src1 in *.
       change (fun x : X => ktr_tgt0 x) with ktr_tgt0 in *. subst.
       assert (e0 = e) by eauto; subst.
-      gstep. econs 10; eauto. i. subst. gbase. eapply CIH; et.
+      gstep. econs 11; eauto. i. subst. gbase. eapply CIH; et.
 Unshelve.
   all: ss.
 Qed.
@@ -1150,7 +1208,8 @@ Section DUAL.
       match e with
       | Choose X => trigger (Take X)
       | Take X => trigger (Choose X)
-      | Syscall fn arg argp => trigger (Syscall fn arg argp)
+      | SyscallOut fn arg argp => trigger (SyscallOut fn arg argp)
+      | SyscallIn rv => trigger (SyscallIn rv)
       end
   .
   Definition dualize R (d: itree (E +' eventE) R): itree (E +' eventE) R := interp (case_ trivial_Handler dualizer) d.
@@ -1164,6 +1223,8 @@ Section DUAL.
     - cbn. unfold trivial_Handler. rewrite interp_trigger. cbn. rewrite bind_trigger.
       unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
     - cbn. destruct e; cbn.
+      + rewrite interp_trigger. cbn. rewrite bind_trigger.
+        unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
       + rewrite interp_trigger. cbn. rewrite bind_trigger.
         unfold trigger. f_equiv. ii. rewrite tau_euttge. refl.
       + rewrite interp_trigger. cbn. rewrite bind_trigger.
@@ -1242,6 +1303,9 @@ Section DUAL.
     - gstep. rewrite ! dualize_vis_r. econs 2. i. specialize (SIM _ _ EQ).
       guclo simg_indC_spec. econs; eauto. guclo simg_indC_spec. econs; eauto.
       gbase. subst; eauto. eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
+    - gstep. rewrite ! dualize_vis_r. econs 3. i.
+      guclo simg_indC_spec. econs; eauto. guclo simg_indC_spec. econs; eauto.
+      gbase. subst; eauto. eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
     - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto.
     - guclo simg_indC_spec. rewrite ! dualize_tau. econs; eauto.
     - guclo simg_indC_spec. rewrite ! dualize_vis_r. des. econs; eauto. esplits; eauto.
@@ -1254,7 +1318,7 @@ Section DUAL.
       guclo simg_indC_spec.
     - gstep. econs; eauto. gbase; eauto.
       eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
-    - gstep. rewrite ! dualize_vis_l. econs 10. i. specialize (SIM _ _ EQ).
+    - gstep. rewrite ! dualize_vis_l. econs 11. i. specialize (SIM _ _ EQ).
       guclo simg_indC_spec. econs; eauto. guclo simg_indC_spec. econs; eauto.
       gbase. subst; eauto.
       eapply rclo7_clo; eauto. left. econs; eauto. eapply rclo7_base. eauto.
@@ -1314,7 +1378,8 @@ Section DUAL.
         Vis (inr1 (match e in (eventE T) return (eventE T) with
              | @Choose X0 => @Take X0
              | @Take X0 => @Choose X0
-             | Syscall fn varg rvs => (Syscall fn varg rvs)
+             | SyscallOut fn varg rvs => (SyscallOut fn varg rvs)
+             | SyscallIn rv => (SyscallIn rv)
              end)) (fun x => dualize2 (ktr x))
     end.
 
@@ -1331,7 +1396,8 @@ Section DUAL.
           VisF (inr1 (match e in (eventE T) return (eventE T) with
                       | @Choose X0 => @Take X0
                       | @Take X0 => @Choose X0
-                      | Syscall fn varg rvs => (Syscall fn varg rvs)
+                      | SyscallOut fn varg rvs => (SyscallOut fn varg rvs)
+                      | SyscallIn rv => (SyscallIn rv)
                       end)) (fun x => dualize2 (ktr x))
       end.
   Proof. unfold dualize2. ides itr; ss. destruct e; ss. Qed.
@@ -1371,7 +1437,8 @@ Section DUAL.
       trigger (match e with
                | @Choose X => @Take X
                | @Take X => (@Choose X)
-               | Syscall fn varg rvs => (Syscall fn varg rvs)
+               | SyscallOut fn varg rvs => (SyscallOut fn varg rvs)
+               | SyscallIn rv => (SyscallIn rv)
                end) >>= (fun x => dualize2 (ktr x)).
   Proof. do 2 rewrite bind_trigger. eapply observe_eta. grind. Qed.
 
@@ -1387,6 +1454,7 @@ Section DUAL.
     ginit. revert_until RR. gcofix CIH. i. induction SIM using simg_ind.
     - guclo simg_indC_spec. rewrite ! dualize2_ret. econs 1; eauto.
     - gstep. rewrite ! dualize2_vis_r. econs 2. i. specialize (SIM _ _ EQ). gbase. subst; eauto.
+    - gstep. rewrite ! dualize2_vis_r. econs 3. i. gbase. subst; eauto.
     - guclo simg_indC_spec. rewrite ! dualize2_tau. econs; eauto.
     - guclo simg_indC_spec. rewrite ! dualize2_tau. econs; eauto.
     - guclo simg_indC_spec. rewrite ! dualize2_vis_r. des. econs; eauto.
@@ -1394,7 +1462,7 @@ Section DUAL.
     - guclo simg_indC_spec. rewrite ! dualize2_vis_r. econs; eauto. i. specialize (SIM x). des. eauto.
     - guclo simg_indC_spec. rewrite ! dualize2_vis_r. des. econs; eauto.
     - gstep. econs; eauto. gbase; eauto.
-    - gstep. rewrite ! dualize2_vis_l. econs 10. i. specialize (SIM _ _ EQ). gbase. subst; eauto.
+    - gstep. rewrite ! dualize2_vis_l. econs 11. i. specialize (SIM _ _ EQ). gbase. subst; eauto.
   Qed.
 
   Corollary dualize2_simg
@@ -1537,12 +1605,31 @@ Proof.
       i. exfalso. inv STEP.
     }
   }
-  { gstep. eapply sim_vis; ss. i.
-    eapply step_trigger_syscall_iff in STEP. des. clarify.
-    esplits.
-    { eapply step_trigger_syscall; et. }
-    { gbase. eapply CIH. hexploit SIM; et. }
+  Local Opaque STS.state.
+  {
+    gstep. eapply sim_vis; ss. i.
+    inv STEP; rewrite bind_trigger in *; simpl_depind; clarify.
+    esplits; eauto.
+    { econs; eauto. }
+    gstep.
+    eapply sim_demonic_tgt; ss. i. inv STEP; rewrite bind_trigger in *; simpl_depind; clarify. esplits.
+    eapply sim_demonic_src; ss. esplits; ss. { econs; eauto. }
+    unfold guarantee. irw.
+    eapply sim_demonic_tgt; ss. i. inv STEP; simpl_depind; clarify. esplits.
+    eapply sim_demonic_src; ss. esplits; ss. { econs; eauto. }
+    eapply sim_vis; ss. ii. des. clear_tac. inv STEP; simpl_depind; clarify.
+    esplits; et.
+    { econs; eauto. }
+    gbase. eapply CIH. hexploit SIM; et.
   }
+  {
+    gstep. eapply sim_vis; ss. i.
+    inv STEP; rewrite bind_trigger in *; simpl_depind; clarify.
+    esplits; eauto.
+    { econs; eauto. }
+    gbase. eapply CIH. hexploit SIM; et.
+  }
+  Local Transparent STS.state.
   { guclo sim_indC_spec. eapply sim_indC_demonic_src; ss.
     esplits; eauto. eapply step_tau; et.
   }
@@ -1573,6 +1660,8 @@ Proof.
   { guclo sim_indC_spec. eapply sim_indC_angelic_src; ss. i.
     eapply step_trigger_take_iff in STEP. des. clarify.
   }
+Unshelve.
+  all: ss.
 Qed.
 
 Theorem adequacy_global_itree itr_src itr_tgt o_src0 o_tgt0
@@ -1664,6 +1753,10 @@ But this is beyond the scope of previous works (ITrees).
     - rewrite ! interp_ret. gstep. econs; eauto.
     - rewrite ! interp_bind. rewrite ! interp_trigger. irw. unfold trivial_Handler.
       gstep. econs; eauto. ii. subst. irw.
+      guclo simg_indC_spec. econs; eauto.
+      guclo simg_indC_spec.
+    - rewrite ! interp_bind. rewrite ! interp_trigger. irw. unfold trivial_Handler.
+      gstep. econs; eauto. irw.
       guclo simg_indC_spec. econs; eauto.
       guclo simg_indC_spec.
     - rewrite interp_tau. guclo simg_indC_spec.

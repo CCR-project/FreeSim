@@ -250,6 +250,12 @@ Variant simg_indC
     (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     simg_indC simg RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
+| simg_indC_syscall_in
+    f_src0 f_tgt0
+    ktr_src0 ktr_tgt0 rv
+    (SIM: simg _ _ RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt))
+  :
+    simg_indC simg RR f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0)
 
 | simg_indC_tauL
     f_src0
@@ -311,11 +317,12 @@ Proof.
   { econs 2; eauto. }
   { econs 3; eauto. }
   { econs 4; eauto. }
-  { econs 5; eauto. des. esplits; eauto. }
-  { econs 6; eauto. }
+  { econs 5; eauto. }
+  { econs 6; eauto. des. esplits; eauto. }
   { econs 7; eauto. }
-  { econs 8; eauto. des. esplits; eauto. }
-  { econs 9; eauto. }
+  { econs 8; eauto. }
+  { econs 9; eauto. des. esplits; eauto. }
+  { econs 10; eauto. }
 Qed.
 Hint Resolve simg_indC_mon: paco.
 
@@ -326,6 +333,7 @@ Proof.
   econs; eauto with paco. i. inv PR.
   { econs 1; eauto. }
   { econs 2; eauto. i. eapply rclo7_base. auto. }
+  { econs 3; eauto. i. eapply rclo7_base. eauto. }
   { econs 4; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
   { econs 5; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
   { des. econs 6; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }

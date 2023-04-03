@@ -20,11 +20,11 @@ Section COMMON.
   Variable R: Type.
   Let ITR := (itree (E +' eventE) R).
 
-  Variant obs_step (args: string * Any.t * (Any.t -> Prop)) (r: ITR -> Prop): ITR -> Prop :=
+  Variant obs_step (args: string * Any.t * (Any.t -> Prop) * Any.t) (r: ITR -> Prop): ITR -> Prop :=
     | obs_step_syscall
-        fn varg rvs ktr
-        (REL: forall v, r (ktr v))
-        (ARGS: args = (fn, varg, rvs))
+        fn varg rvs ktr v
+        (REL: r (ktr v))
+        (ARGS: args = (fn, varg, rvs, v))
       :
       obs_step args r (trigger (SyscallOut fn varg rvs) >>= ktr)
   .
@@ -32,6 +32,7 @@ Section COMMON.
   Variant obs_step_in (args: Any.t) (r: ITR -> Prop): ITR -> Prop :=
     | obs_step_syscall_in
         rv ktr
+        (REL: r (ktr tt))
         (ARGS: args = rv)
       :
       obs_step_in args r (trigger (SyscallIn rv) >>= ktr)
@@ -182,7 +183,7 @@ Section EXP_SIM.
       \/
         (exists arg,
             ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
-              ((<<OBS: obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
+              ((<<OBS: forall rv, obs_step (arg, rv) (fun ktr_tgt => obs_step (arg, rv) (fun ktr_src => exists exp0, (simg_alt_exp _ _ RR exp0 ktr_src ktr_tgt)) itr_src) itr_tgt>>)))
       \/
         (exists arg,
             ((is_obs_in arg itr_src) /\ (is_obs_in arg itr_tgt)) /\
@@ -212,7 +213,7 @@ Section EXP_SIM.
     ii. inv IN.
     { left. eauto. }
     right. des; [left | right; left | do 2 right; left | do 3 right; left | repeat right].
-    { exists arg. splits; auto. eapply obs_step_mon; [|eauto]. i; ss.
+    { exists arg. splits; auto. i. eapply obs_step_mon; [|eauto]. i; ss.
       eapply obs_step_mon; [|eauto]. i; ss. des; eauto.
     }
     { exists arg. splits; auto. eapply obs_step_in_mon; [|eauto]. i; ss.
@@ -254,7 +255,7 @@ Section IMP_SIM.
         \/
           (exists arg,
               ((is_obs arg itr_src) /\ (is_obs arg itr_tgt)) /\
-                (<<OBS: obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>))
+                (<<OBS: forall rv, obs_step (arg, rv) (fun ktr_tgt => obs_step (arg, rv) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt>>))
         \/
           (exists arg,
               ((is_obs_in arg itr_src) /\ (is_obs_in arg itr_tgt)) /\
@@ -291,8 +292,8 @@ Section IMP_SIM.
             itr_src itr_tgt arg
             (SRC: is_obs arg itr_src)
             (TGT: is_obs arg itr_tgt)
-            (SIM:
-              obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            (SIM: forall rv,
+              obs_step (arg, rv) (fun ktr_tgt => obs_step (arg, rv) (fun ktr_src => (r _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt),
             P itr_src itr_tgt)
         (OBSIN: forall
             itr_src itr_tgt arg
@@ -378,8 +379,8 @@ Section IMP_SIM.
         itr_src itr_tgt arg
         (SRC: is_obs arg itr_src)
         (TGT: is_obs arg itr_tgt)
-        (SIM:
-            obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
+        (SIM: forall rv,
+            obs_step (arg, rv) (fun ktr_tgt => obs_step (arg, rv) (fun ktr_src => (simg_alt_imp _ _ RR ktr_src ktr_tgt)) itr_src) itr_tgt)
       :
       simg_alt_imp_indC simg_alt_imp RR itr_src itr_tgt
     | simg_alt_imp_indC_obs_in
@@ -472,8 +473,8 @@ Section IMP_SIM.
             itr_src itr_tgt arg
             (SRC: is_obs arg itr_src)
             (TGT: is_obs arg itr_tgt)
-            (SIM:
-                obs_step (arg) (fun ktr_tgt => obs_step (arg) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
+            (SIM: forall rv,
+                obs_step (arg, rv) (fun ktr_tgt => obs_step (arg, rv) (fun ktr_src => (simg_alt_imp RR ktr_src ktr_tgt)) itr_src) itr_tgt),
             P itr_src itr_tgt)
         (OBSIN: forall
             itr_src itr_tgt arg
