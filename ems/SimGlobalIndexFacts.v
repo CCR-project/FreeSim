@@ -1737,7 +1737,7 @@ But this is beyond the scope of previous works (ITrees).
   Qed.
 
   (* in the style of eutt_interp' *)
-  Theorem simg_interp' {E F R0 R1} (RR : Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+  Theorem simg_interp_aux {E F R0 R1} (RR : Ord.t -> Ord.t -> R0 -> R1 -> Prop)
     (i_src: itree (E +' eventE) R0)
     (i_tgt: itree (E +' eventE) R1)
     (f: E ~> itree (F +' eventE))
@@ -1795,6 +1795,91 @@ But this is beyond the scope of previous works (ITrees).
     all: ss.
   Qed.
 
+
+
+  (*** TODO: move to ITreeLib ***)
+  Definition StatefulHandler := fun S E F => E ~> stateT S (itree F).
+
+  Instance Case_sum1_StatefulHandler {S: Type}: Case (StatefulHandler S) sum1 :=
+    fun a b c (X: StatefulHandler S a c) (Y: StatefulHandler S b c) T (ab: (a +' b) T) =>
+      match ab with
+      | (a|)%sum => X T a
+      | (|b)%sum => Y T b
+      end
+  .
+
+  Definition trivial_StatefulHandler `{E -< F} {S}: StatefulHandler S E F.
+    ii. eapply pure_state; try eassumption. eapply H. eauto.
+  Defined.
+  Hint Unfold trivial_StatefulHandler.
+
+  Theorem simg_interp_state_aux {E F R0 R1} (RR : Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+    (i_src: itree (E +' eventE) R0)
+    (i_tgt: itree (E +' eventE) R1)
+    S
+    (f: E ~> stateT S (itree (F +' eventE)))
+    f_src f_tgt
+    (SIM: simg RR f_src f_tgt i_src i_tgt)
+    :
+    forall s0, simg (fun o0 o1 '(s0, r0) '(s1, r1) => RR o0 o1 r0 r1 /\ s0 = s1)
+                 f_src f_tgt (interp_state (case_ f trivial_StatefulHandler) i_src s0)
+                 (interp_state (case_ f trivial_StatefulHandler) i_tgt s0)
+  .
+  Proof.
+    i. ginit. revert_until RR.
+    gcofix CIH.
+    i. induction SIM using simg_ind.
+    - rewrite ! interp_state_ret. gstep. econs; eauto.
+    - rewrite ! interp_state_bind. rewrite ! interp_state_trigger. irw.
+      unfold trivial_StatefulHandler. unfold pure_state. rewrite ! bind_bind.
+      gstep. econs; eauto. ii. subst. irw.
+      guclo simg_indC_spec. econs; eauto.
+      guclo simg_indC_spec.
+    - rewrite ! interp_state_bind. rewrite ! interp_state_trigger. irw.
+      unfold trivial_StatefulHandler. unfold pure_state. rewrite ! bind_bind.
+      gstep. econs; eauto. irw.
+      guclo simg_indC_spec. econs; eauto.
+      guclo simg_indC_spec.
+    - rewrite interp_state_tau. guclo simg_indC_spec.
+    - rewrite interp_state_tau. guclo simg_indC_spec.
+    - des.
+      rewrite interp_state_bind. rewrite interp_state_trigger. irw.
+      unfold trivial_StatefulHandler. unfold pure_state. rewrite ! bind_bind.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      irw. guclo simg_indC_spec.
+    - rewrite interp_state_bind. rewrite interp_state_trigger. irw.
+      unfold trivial_StatefulHandler. unfold pure_state. rewrite ! bind_bind.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      spc SIM. des.
+      irw. guclo simg_indC_spec.
+    - rewrite interp_state_bind. rewrite interp_state_trigger. irw.
+      unfold trivial_StatefulHandler. unfold pure_state. rewrite ! bind_bind.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      spc SIM. des.
+      irw. guclo simg_indC_spec.
+    - des.
+      rewrite interp_state_bind. rewrite interp_state_trigger. irw.
+      unfold trivial_StatefulHandler. unfold pure_state. rewrite ! bind_bind.
+      guclo simg_indC_spec. econs; eauto. esplits; eauto.
+      irw. guclo simg_indC_spec.
+    - gstep. econs; eauto. gbase. eapply CIH; et.
+    - rewrite ! interp_state_bind. rewrite ! interp_state_trigger. irw.
+      guclo bindC_spec. econs; eauto.
+      { gfinal. right. eapply paco7_mon.
+        { eapply simg_refl. }
+        ii; ss.
+      }
+      ii. ss. des. subst. irw.
+      guclo simg_indC_spec. econs; eauto. instantiate (1:=(Ord.S f_src0)%ord).
+      guclo simg_indC_spec. econs; eauto. instantiate (1:=(Ord.S f_tgt0)%ord).
+      gstep. econsr; eauto.
+      { gbase. eapply CIH; eauto. }
+      { eapply Ord.S_is_S. }
+      { eapply Ord.S_is_S. }
+  Unshelve.
+    all: ss.
+  Qed.
+
   Let simg {E R}: relation (itree (E +' eventE) R) := simg (fun _ _ => eq) 0%ord 0%ord.
 
   (* in the style of eutt_iter *)
@@ -1806,14 +1891,30 @@ But this is beyond the scope of previous works (ITrees).
   rp; et. extensionalities o0 o1 i0 i1. eapply prop_ext. split; i; eapply sum_rel_eq; ss.
   Defined.
 
+  (* in the style of eutt_interp' *)
+  #[global] Program Instance simg_interp' {E F} {R} (f: E ~> itree (F +' eventE)):
+    Proper (simg ==> simg) (interp (case_ f trivial_Handler) (E:=E +' eventE) (T:=R)).
+  Next Obligation.
+    ii. eapply simg_interp_aux. eauto.
+  Qed.
+
   (* respectful_eutt *)
   Let respectful_simg {E F} := (Relation.i_respectful (fun T => simg (E:=E) (R:=T)) (fun T => simg (E:=F) (R:=T))).
-
   (* in the style of eutt_interp *)
-  #[global] Program Instance simg_interp {E F} (f: forall T : Type, E T -> itree (F +' eventE) T):
+  #[global] Program Instance simg_interp {E F} (f: E ~> itree (F +' eventE)):
     Proper (respectful_simg) (interp (case_ f trivial_Handler) (E:=E +' eventE)).
   Next Obligation.
     ii. eapply simg_interp'. eauto.
+  Qed.
+
+  (* in the style of eutt_interp_state *)
+  #[global] Program Instance simg_interp_state {E F} {R S} (f: E ~> stateT S (itree (F +' eventE))):
+    Proper (simg ==> eq ==> simg) (interp_state (case_ f trivial_StatefulHandler) (E:=E +' eventE) (T:=R)).
+  Next Obligation.
+    ii. subst. eapply simg_interp_state_aux in H.
+    replace (fun (_ _ : Ord.t) '(s0, r0) '(s1, r1) => r0 = r1 /\ s0 = s1) with (fun (_ _: Ord.t) => @eq (S * R)) in H; cycle 1.
+    { extensionalities a b c d. destruct c, d; ss. eapply prop_ext. split; i; des; clarify. }
+    eauto.
   Qed.
 
 End ITER.
