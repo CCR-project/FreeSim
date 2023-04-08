@@ -50,17 +50,18 @@ Section PROOF.
     { gstep. econs 1. eapply TOP. eauto. }
     { gstep. econs 2. i. specialize (GEN x_src x_tgt EQ).
       gfinal. left. eapply CIH. eapply GEN. }
-    { gstep. econs 3. instantiate (1:= (f_tgt, g_src0)). econs 2; auto.
+    { gstep. econs 3. gfinal. left. eapply CIH. eapply GEN. }
+    { gstep. econs 4. instantiate (1:= (f_tgt, g_src0)). econs 2; auto.
       gfinal. left. eapply CIH. eauto. }
-    { gstep. econs 4. instantiate (1:= (f_src, g_tgt0)). econs 2; auto.
+    { gstep. econs 5. instantiate (1:= (f_src, g_tgt0)). econs 2; auto.
       gfinal. left. eapply CIH. eauto. }
-    { gstep. econs 5. instantiate (1:= (f_tgt, g_src0)). econs 2; auto.
+    { gstep. econs 6. instantiate (1:= (f_tgt, g_src0)). econs 2; auto.
       des. exists x. gfinal. left. eapply CIH. eauto. }
-    { gstep. econs 6. instantiate (1:= (f_src, g_tgt0)). econs 2; auto.
+    { gstep. econs 7. instantiate (1:= (f_src, g_tgt0)). econs 2; auto.
       i. gfinal. left. eapply CIH. eauto. }
-    { gstep. econs 7. instantiate (1:= (f_tgt, g_src0)). econs 2; auto.
+    { gstep. econs 8. instantiate (1:= (f_tgt, g_src0)). econs 2; auto.
       i. gfinal. left. eapply CIH. eauto. }
-    { gstep. econs 8. instantiate (1:= (f_src, g_tgt0)). econs 2; auto.
+    { gstep. econs 9. instantiate (1:= (f_src, g_tgt0)). econs 2; auto.
       des. exists x. gfinal. left. eapply CIH. eauto. }
     { eapply simg_aux_gen_exp in SIM. des.
       guclo simg_exp_leC_spec. econs.
@@ -68,7 +69,7 @@ Section PROOF.
       { right. econs 1. auto. }
       { right. econs 1. auto. }
     }
-    { gstep. econs 9. i. specialize (GEN x_src x_tgt EQ).
+    { gstep. econs 10. i. specialize (GEN x_src x_tgt EQ).
       gfinal. left. eapply CIH. eapply GEN. }
   Qed.
 

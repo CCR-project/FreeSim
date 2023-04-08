@@ -33,7 +33,13 @@ Section SIM.
         f_src0 f_tgt0
         (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg_exp _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
       :
-      _simg_exp simg_exp RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+      _simg_exp simg_exp RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
+    | simg_exp_syscall_in
+        ktr_src0 ktr_tgt0 rv
+        f_src0 f_tgt0
+        (SIM: simg_exp _ _ RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt))
+      :
+      _simg_exp simg_exp RR f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0)
 
     | simg_exp_tauL
         itr_src0 itr_tgt0
@@ -97,11 +103,12 @@ Section SIM.
     { econs 2; eauto. }
     { econs 3; eauto. }
     { econs 4; eauto. }
-    { econs 5; eauto. des. esplits; eauto. }
-    { econs 6; eauto. }
+    { econs 5; eauto. }
+    { econs 6; eauto. des. esplits; eauto. }
     { econs 7; eauto. }
-    { econs 8; eauto. des. esplits; eauto. }
-    { econs 9; eauto. }
+    { econs 8; eauto. }
+    { econs 9; eauto. des. esplits; eauto. }
+    { econs 10; eauto. }
   Qed.
   Hint Resolve simg_exp_mon: paco.
   Hint Resolve cpn7_wcompat: paco.
@@ -134,37 +141,38 @@ Section SIM.
     eapply GF in SIM. inv SIM.
     { econs 1. auto. }
     { econs 2. i. clarify. eapply rclo7_base. eauto. }
+    { econs 3. i. clarify. eapply rclo7_base. eauto. }
     { destruct LES; clarify.
-      - econs 3; eauto. eapply rclo7_base. eauto.
-      - econs 3. eauto. eapply rclo7_clo. econs. right; eauto. left; eauto.
+      - econs 4; eauto. eapply rclo7_base. eauto.
+      - econs 4. eauto. eapply rclo7_clo. econs. right; eauto. left; eauto.
         eapply rclo7_base; eauto.
     }
     { destruct LET; clarify.
-      - econs 4; eauto. eapply rclo7_base. eauto.
-      - econs 4. eauto. eapply rclo7_clo. econs. left; eauto. right; eauto.
+      - econs 5; eauto. eapply rclo7_base. eauto.
+      - econs 5. eauto. eapply rclo7_clo. econs. left; eauto. right; eauto.
         eapply rclo7_base; eauto.
     }
     { des. destruct LES; clarify.
-      - econs 5; eauto. eexists. eapply rclo7_base. eauto.
-      - econs 5. eauto. eexists. eapply rclo7_clo. econs. right; eauto. left; eauto.
+      - econs 6; eauto. eexists. eapply rclo7_base. eauto.
+      - econs 6. eauto. eexists. eapply rclo7_clo. econs. right; eauto. left; eauto.
         eapply rclo7_base; eauto.
     }
     { destruct LET; clarify.
-      - econs 6; eauto. i. eapply rclo7_base. eauto.
-      - econs 6. eauto. i. eapply rclo7_clo. econs. left; eauto. right; eauto.
+      - econs 7; eauto. i. eapply rclo7_base. eauto.
+      - econs 7. eauto. i. eapply rclo7_clo. econs. left; eauto. right; eauto.
         eapply rclo7_base; eauto.
     }
     { destruct LES; clarify.
-      - econs 7; eauto. i. eapply rclo7_base. eauto.
-      - econs 7. eauto. i. eapply rclo7_clo. econs. right; eauto. left; eauto.
+      - econs 8; eauto. i. eapply rclo7_base. eauto.
+      - econs 8. eauto. i. eapply rclo7_clo. econs. right; eauto. left; eauto.
         eapply rclo7_base; eauto.
     }
     { des. destruct LET; clarify.
-      - econs 8; eauto. eexists. eapply rclo7_base. eauto.
-      - econs 8. eauto. eexists. eapply rclo7_clo. econs. left; eauto. right; eauto.
+      - econs 9; eauto. eexists. eapply rclo7_base. eauto.
+      - econs 9. eauto. eexists. eapply rclo7_clo. econs. left; eauto. right; eauto.
         eapply rclo7_base; eauto.
     }
-    { econs 9. i. clarify. eapply rclo7_base. eauto. }
+    { econs 10. i. clarify. eapply rclo7_base. eauto. }
   Qed.
 
 End SIM.

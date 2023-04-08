@@ -97,7 +97,8 @@ Section MODSEML.
       end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
-    | VisF (Syscall fn args rvs) k => vis
+    | VisF (SyscallOut fn args rvs) k => vis
+    | VisF (SyscallIn rv) k => vis
     end
   .
 
@@ -114,12 +115,22 @@ Section MODSEML.
       X k (x: X)
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
-  | step_syscall
-      fn args rv (rvs: Any.t -> Prop) k
-      (SYSCALL: syscall_sem (event_sys fn args rv))
-      (RETURN: rvs rv)
+  (* | step_syscall *)
+  (*     fn args rv (rvs: Any.t -> Prop) k *)
+  (*     (SYSCALL: syscall_sem (event_sys fn args rv)) *)
+  (*     (RETURN: rvs rv) *)
+  (*   : *)
+  (*     step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv) *)
+  | step_syscall_out
+      fn args (rvs: Any.t -> Prop) k
     :
-      step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv)
+      (* step (Vis (subevent _ (SyscallOut fn args rvs)) k) (Some (event_out fn args)) *)
+      (*   (rv <- trigger (Choose _);; guarantee(rvs rv /\ syscall_sem fn args rv);;; trigger (SyscallIn rv);;; k rv) *)
+      step (Vis (subevent _ (SyscallOut fn args rvs)) k) (Some (event_out fn args)) (k tt)
+  | step_syscall_in
+      rv k
+    :
+      step (Vis (subevent _ (SyscallIn rv)) k) (Some (event_in rv)) (k tt)
   .
 
   Lemma step_trigger_choose_iff X k itr e
@@ -133,6 +144,7 @@ Section MODSEML.
     { eapply f_equal with (f:=observe) in H0. ss.
       unfold trigger in H0. ss. cbn in H0.
       dependent destruction H0. ired. et.  }
+    { eapply f_equal with (f:=observe) in H0. ss. }
     { eapply f_equal with (f:=observe) in H0. ss. }
     { eapply f_equal with (f:=observe) in H0. ss. }
   Qed.
@@ -149,6 +161,7 @@ Section MODSEML.
     { eapply f_equal with (f:=observe) in H0. ss.
       unfold trigger in H0. ss. cbn in H0.
       dependent destruction H0. ired. et.  }
+    { eapply f_equal with (f:=observe) in H0. ss. }
     { eapply f_equal with (f:=observe) in H0. ss. }
   Qed.
 
@@ -168,20 +181,20 @@ Section MODSEML.
     inv STEP.
   Qed.
 
-  Lemma step_trigger_syscall_iff fn args rvs k e itr
-        (STEP: step (trigger (Syscall fn args rvs) >>= k) e itr)
-    :
-      exists rv, itr = k rv /\ e = Some (event_sys fn args rv)
-                 /\ <<RV: rvs rv>> /\ <<SYS: syscall_sem (event_sys fn args rv)>>.
-  Proof.
-    inv STEP.
-    { eapply f_equal with (f:=observe) in H0. ss. }
-    { eapply f_equal with (f:=observe) in H0. ss. }
-    { eapply f_equal with (f:=observe) in H0. ss. }
-    { eapply f_equal with (f:=observe) in H0. ss.
-      unfold trigger in H0. ss. cbn in H0.
-      dependent destruction H0. ired. et. }
-  Qed.
+  (* Lemma step_trigger_syscall_iff fn args rvs k e itr *)
+  (*       (STEP: step (trigger (Syscall fn args rvs) >>= k) e itr) *)
+  (*   : *)
+  (*     exists rv, itr = k rv /\ e = Some (event_sys fn args rv) *)
+  (*                /\ <<RV: rvs rv>> /\ <<SYS: syscall_sem (event_sys fn args rv)>>. *)
+  (* Proof. *)
+  (*   inv STEP. *)
+  (*   { eapply f_equal with (f:=observe) in H0. ss. } *)
+  (*   { eapply f_equal with (f:=observe) in H0. ss. } *)
+  (*   { eapply f_equal with (f:=observe) in H0. ss. } *)
+  (*   { eapply f_equal with (f:=observe) in H0. ss. *)
+  (*     unfold trigger in H0. ss. cbn in H0. *)
+  (*     dependent destruction H0. ired. et. } *)
+  (* Qed. *)
 
 
   Let itree_eta E R (itr0 itr1: itree E R)
@@ -222,20 +235,20 @@ Section MODSEML.
       extensionality x0. eapply itree_eta. ss. }
   Qed.
 
-  Lemma step_trigger_syscall fn args (rvs: Any.t -> Prop) k rv
-        (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
-    :
-      step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).
-  Proof.
-    unfold trigger. ss.
-    match goal with
-    | [ |- step ?itr _ _] =>
-      replace itr with (Subevent.vis (Syscall fn args rvs) k)
-    end; ss.
-    { econs; et. }
-    { eapply itree_eta. ss. cbv. f_equal.
-      extensionality x0. eapply itree_eta. ss. }
-  Qed.
+  (* Lemma step_trigger_syscall fn args (rvs: Any.t -> Prop) k rv *)
+  (*       (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv)) *)
+  (*   : *)
+  (*     step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv). *)
+  (* Proof. *)
+  (*   unfold trigger. ss. *)
+  (*   match goal with *)
+  (*   | [ |- step ?itr _ _] => *)
+  (*     replace itr with (Subevent.vis (Syscall fn args rvs) k) *)
+  (*   end; ss. *)
+  (*   { econs; et. } *)
+  (*   { eapply itree_eta. ss. cbv. f_equal. *)
+  (*     extensionality x0. eapply itree_eta. ss. } *)
+  (* Qed. *)
 
 
   Program Definition compile_itree: itree eventE Any.t -> semantics :=
@@ -247,7 +260,7 @@ Section MODSEML.
         STS.state_sort := state_sort;
       |}
   .
-  Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
+  Next Obligation. inv STEP; inv STEP0; ss; csc. Qed.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.

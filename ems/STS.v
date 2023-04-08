@@ -7,12 +7,13 @@ Set Implicit Arguments.
 
 
 Inductive event: Type :=
-| event_sys
+| event_out
     (fn: string)
     (args: Any.t)
+| event_in
     (rv: Any.t)
 .
-Parameter syscall_sem: event -> Prop.
+Parameter syscall_sem: string -> Any.t -> Any.t -> Prop.
 
 
 Inductive sort: Type :=
@@ -36,7 +37,7 @@ Record semantics : Type := Semantics_gen {
       (STEP: step st0 ev0 st1)
       (STEP: step st0 ev1 st2)
     ,
-      (ev0 = ev1 -> st1 = st2);
+      (ev0 = ev1 /\ st1 = st2);
   wf_vis_event: forall
       st0 ev0 st1
       (VIS: state_sort st0 = vis)

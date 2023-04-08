@@ -36,7 +36,14 @@ Section SIM.
       f_src0 f_tgt0
       (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), @_simg_aux simg_aux _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
     :
-    _simg_aux simg_aux RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+    _simg_aux simg_aux RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
+
+  | simg_aux_syscall_in
+      ktr_src0 ktr_tgt0 rv
+      f_src0 f_tgt0
+      (SIM: @_simg_aux simg_aux _ _ RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt))
+    :
+    _simg_aux simg_aux RR f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0)
 
   | simg_aux_tauL
       itr_src0 itr_tgt0
@@ -110,7 +117,13 @@ Section SIM.
             f_src0 f_tgt0
             ktr_src0 ktr_tgt0 fn varg rvs
             (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), (<<SIM: _simg_aux r RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>) /\ (<<IH: P f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>)),
-            P f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0))
+            P f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0))
+        (SYSCALLIN: forall
+            f_src f_tgt
+            f_src0 f_tgt0
+            ktr_src0 ktr_tgt0 rv
+            (SIM: (<<SIM: _simg_aux r RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt)>>) /\ (<<IH: P f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt)>>)),
+            P f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0))
         (TAUL: forall
             f_src0
             f_src f_tgt
@@ -177,6 +190,7 @@ Section SIM.
     fix IH 5. i. inv SIM.
     { eapply RET; eauto. }
     { eapply SYSCALL; eauto. i. split; eauto. }
+    { eapply SYSCALLIN; eauto. }
     { eapply TAUL; eauto. }
     { eapply TAUR; eauto. }
     { eapply CHOOSEL; eauto. des. esplits; eauto. }
@@ -194,14 +208,15 @@ Section SIM.
     ii. induction IN using _simg_aux_ind2.
     { econs 1; eauto. }
     { econs 2; eauto. i. specialize (SIM x_src x_tgt EQ). des; eauto. }
-    { econs 3; eauto. }
+    { econs 3; eauto. eapply SIM; et. }
     { econs 4; eauto. }
-    { econs 5; eauto. des. esplits; eauto. }
-    { econs 6; eauto. i. spc SIM. des; et. }
+    { econs 5; eauto. }
+    { econs 6; eauto. des. esplits; eauto. }
     { econs 7; eauto. i. spc SIM. des; et. }
-    { econs 8; eauto. des. esplits; eauto. }
-    { econs 9; eauto. }
-    { econs 10; eauto. i. specialize (SIM x_src x_tgt EQ). des; eauto. }
+    { econs 8; eauto. i. spc SIM. des; et. }
+    { econs 9; eauto. des. esplits; eauto. }
+    { econs 10; eauto. }
+    { econs 11; eauto. i. specialize (SIM x_src x_tgt EQ). des; eauto. }
   Qed.
   Hint Resolve simg_aux_mon: paco.
   Hint Resolve cpn7_wcompat: paco.
@@ -223,7 +238,13 @@ Section SIM.
         ktr_src0 ktr_tgt0 fn varg rvs
         (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg_aux _ _ RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
       :
-      simg_aux_indC simg_aux RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+      simg_aux_indC simg_aux RR f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
+    | simg_aux_indC_syscall_in
+        f_src0 f_tgt0
+        ktr_src0 ktr_tgt0 rv
+        (SIM: simg_aux _ _ RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt))
+      :
+      simg_aux_indC simg_aux RR f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0)
 
     | simg_aux_indC_tauL
         f_src0
@@ -279,11 +300,12 @@ Section SIM.
     { econs 2; eauto. }
     { econs 3; eauto. }
     { econs 4; eauto. }
-    { econs 5; eauto. des. esplits; eauto. }
-    { econs 6; eauto. }
+    { econs 5; eauto. }
+    { econs 6; eauto. des. esplits; eauto. }
     { econs 7; eauto. }
-    { econs 8; eauto. des. esplits; eauto. }
-    { econs 9; eauto. }
+    { econs 8; eauto. }
+    { econs 9; eauto. des. esplits; eauto. }
+    { econs 10; eauto. }
   Qed.
   Hint Resolve simg_aux_indC_mon: paco.
 
@@ -297,11 +319,12 @@ Section SIM.
       i. eapply rclo7_base. auto. }
     { econs 3; eauto. eapply simg_aux_mon; eauto. i. eapply rclo7_base. auto. }
     { econs 4; eauto. eapply simg_aux_mon; eauto. i. eapply rclo7_base. auto. }
-    { des. econs 5; eauto. esplits. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
-    { econs 6; eauto. i. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
+    { econs 5; eauto. eapply simg_aux_mon; eauto. i. eapply rclo7_base. auto. }
+    { des. econs 6; eauto. esplits. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
     { econs 7; eauto. i. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
-    { des. econs 8; eauto. esplits. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
-    { econs 10; eauto. i. specialize (SIM x_src x_tgt EQ). eapply simg_aux_mon. eauto.
+    { econs 8; eauto. i. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
+    { des. econs 9; eauto. esplits. eapply simg_aux_mon; eauto. i. eapply rclo7_base; eauto. }
+    { econs 11; eauto. i. specialize (SIM x_src x_tgt EQ). eapply simg_aux_mon. eauto.
       i. eapply rclo7_base. auto. }
   Qed.
 
@@ -320,7 +343,13 @@ Section SIM.
             f_src f_tgt
             ktr_src0 ktr_tgt0 fn varg rvs
             (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), (<<SIMG: simg_aux RR f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>) /\ (<<IH: P f_src0 f_tgt0 (ktr_src0 x_src) (ktr_tgt0 x_tgt)>>)),
-            P f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0))
+            P f_src f_tgt (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0))
+        (SYSCALLIN: forall
+            f_src0 f_tgt0
+            f_src f_tgt
+            ktr_src0 ktr_tgt0 rv
+            (SIM: (<<SIMG: simg_aux RR f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt)>>) /\ (<<IH: P f_src0 f_tgt0 (ktr_src0 tt) (ktr_tgt0 tt)>>)),
+            P f_src f_tgt (trigger (SyscallIn rv) >>= ktr_src0) (trigger (SyscallIn rv) >>= ktr_tgt0))
         (TAUL: forall
             f_src0
             f_src f_tgt
@@ -381,6 +410,7 @@ Section SIM.
     i. punfold SIM. induction SIM using _simg_aux_ind2; i; clarify.
     { eapply RET; eauto. }
     { eapply SYSCALL; eauto. i. hexploit SIM; eauto. i. des. split; eauto. pfold. auto. }
+    { eapply SYSCALLIN; eauto. destruct SIM. split; eauto. pfold. auto. }
     { eapply TAUL; eauto. pfold. auto. }
     { eapply TAUR; eauto. pfold. auto. }
     { eapply CHOOSEL; eauto. des. esplits; eauto. pfold. auto. }
@@ -423,18 +453,19 @@ Section PROOF.
     { guclo simg_aux_indC_spec. }
     { gstep. econs 2. i. specialize (SIM _ _ EQ).
       instantiate (2:= Ord.S f_src0). instantiate (1:= Ord.S f_tgt0).
-      econs 9. gfinal. left. eauto. 1,2: apply Ord.S_lt.
+      econs 10. gfinal. left. eauto. 1,2: apply Ord.S_lt.
     }
+    { gstep. econs 3. econs 10. gfinal. left. eauto. 1,2: apply Ord.S_lt. }
     { guclo simg_aux_indC_spec. }
     { guclo simg_aux_indC_spec. }
     { des. guclo simg_aux_indC_spec. }
-    { guclo simg_aux_indC_spec. econs 6. i. specialize (SIM x). des. eauto. }
     { guclo simg_aux_indC_spec. econs 7. i. specialize (SIM x). des. eauto. }
+    { guclo simg_aux_indC_spec. econs 8. i. specialize (SIM x). des. eauto. }
     { des. guclo simg_aux_indC_spec. }
-    { gstep. econs 9; eauto. gfinal. left; eauto. }
-    { gstep. econs 10. i. specialize (SIM _ _ EQ).
+    { gstep. econs 10; eauto. gfinal. left; eauto. }
+    { gstep. econs 11. i. specialize (SIM _ _ EQ).
       instantiate (2:= Ord.S f_src0). instantiate (1:= Ord.S f_tgt0).
-      econs 9. gfinal. left. eauto. 1,2: apply Ord.S_lt.
+      econs 10. gfinal. left. eauto. 1,2: apply Ord.S_lt.
     }
   Qed.
 
@@ -467,7 +498,16 @@ Section GEN.
       (GEN: forall x_src x_tgt (EQ: x_src = x_tgt),
           gen_exp RR f_src0 f_tgt0 (g_src0) (ktr_src0 x_src) (g_tgt0) (ktr_tgt0 x_tgt))
     :
-    gen_exp RR f_src f_tgt (g_src) (trigger (Syscall fn varg rvs) >>= ktr_src0) (g_tgt) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+    gen_exp RR f_src f_tgt (g_src) (trigger (SyscallOut fn varg rvs) >>= ktr_src0) (g_tgt) (trigger (SyscallOut fn varg rvs) >>= ktr_tgt0)
+  | gen_exp_syscall_in
+      ktr_src0 ktr_tgt0 rv
+      f_src0 f_tgt0
+      g_src g_tgt g_src0 g_tgt0
+      (LTS: wf.(lt) g_src0 g_src)
+      (LTT: wf.(lt) g_tgt0 g_tgt)
+      (GEN: gen_exp RR f_src0 f_tgt0 (g_src0) (ktr_src0 tt) (g_tgt0) (ktr_tgt0 tt))
+    :
+    gen_exp RR f_src f_tgt (g_src) (trigger (SyscallIn rv) >>= ktr_src0) (g_tgt) (trigger (SyscallIn rv) >>= ktr_tgt0)
 
   | gen_exp_tauL
       itr_src0 itr_tgt0
@@ -563,23 +603,25 @@ Section GEN.
       3:{ i. specialize (H _ _ EQ _ LTS). eauto. }
       all: auto.
     }
-    { econs 3.
+    { econs 3; try eassumption. eauto.
+    }
+    { econs 4.
       2:{ specialize (IHGEN _ LTS). eauto. }
       auto.
     }
-    { econs 4. 2: eauto. auto. }
-    { econs 5.
+    { econs 5. 2: eauto. auto. }
+    { econs 6.
       2:{ specialize (IHGEN _ LTS). eauto. }
       auto.
     }
-    { econs 6. 2: eauto. auto. }
-    { econs 7.
+    { econs 7. 2: eauto. auto. }
+    { econs 8.
       2:{ i. specialize (H x _ LTS). eauto. }
       auto.
     }
-    { econs 8. 2: eauto. auto. }
-    { econs 9. eauto. all: auto. }
-    { econs 10.
+    { econs 9. 2: eauto. auto. }
+    { econs 10. eauto. all: auto. }
+    { econs 11.
       3:{ i. specialize (H _ _ EQ _ LTS). eauto. }
       all: auto.
     }
@@ -604,23 +646,25 @@ Section GEN.
       3:{ i. specialize (H _ _ EQ _ LTT). eauto. }
       all: auto.
     }
-    { econs 3. 2: eauto. auto. }
-    { econs 4.
+    { econs 3; try eassumption. eauto.
+    }
+    { econs 4. 2: eauto. auto. }
+    { econs 5.
       2:{ specialize (IHGEN _ LTT). eauto. }
       auto.
     }
-    { econs 5. 2: eauto. auto. }
-    { econs 6.
+    { econs 6. 2: eauto. auto. }
+    { econs 7.
       2:{ i. specialize (H x _ LTT). eauto. }
       auto.
     }
-    { econs 7. 2: eauto. auto. }
-    { econs 8.
+    { econs 8. 2: eauto. auto. }
+    { econs 9.
       2:{ specialize (IHGEN _ LTT). eauto. }
       auto.
     }
-    { econs 9. eauto. all: auto. }
-    { econs 10.
+    { econs 10. eauto. all: auto. }
+    { econs 11.
       3:{ i. specialize (H _ _ EQ _ LTT). eauto. }
       all: auto.
     }
@@ -680,14 +724,46 @@ Section PROOF.
       { exists gt0. eapply gen_exp_leL. 2: eauto. right. auto. }
       i. des. eapply gen_exp_leR. 2: eauto. right. auto.
     }
+    { hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gs gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 gs i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           exists gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 o i_s gt i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN1. des. rename o1 into gsT.
+      set (Succ1 := (fun _: A => gsT)). exists (ord_tree_cons Succ1).
+      hexploit ord_tree_join.
+      { instantiate (2:= A).
+        instantiate (2:= (fun '(i_s, i_t) =>
+                            exists gt, gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 gsT i_s gt i_t)).
+        instantiate (1:= fun '(i_s, i_t) o =>
+                           gen_exp (@ord_tree_WF A) RR f_src0 f_tgt0 gsT i_s o i_t).
+        i. ss. des_ifs.
+      }
+      intros JOIN2. des. rename o1 into gtT.
+      set (Succ2 := (fun _: A => gtT)). exists (ord_tree_cons Succ2).
+      eapply gen_exp_syscall_in.
+      { instantiate (1:= (Succ1 def)). ss. }
+      { instantiate (1:= (Succ2 def)). ss. }
+      instantiate (1:=f_tgt0). instantiate (1:=f_src0). i. subst Succ1 Succ2. ss.
+      set (itrp := (ktr_src0 tt, ktr_tgt0 tt)).
+      specialize (JOIN2 itrp). specialize (JOIN1 itrp).
+      subst itrp. ss.
+      hexploit JOIN1; clear JOIN1. eauto. i. des.
+      hexploit JOIN2; clear JOIN2.
+      { exists gt0. eapply gen_exp_leL. 2: eauto. right. auto. }
+      i. des. eapply gen_exp_leR. 2: eauto. right. auto.
+    }
     { des. set (Succ := (fun _: A => gs)). exists (ord_tree_cons Succ), gt.
-      econs 3. 2: eauto. replace gs with (Succ def); ss.
+      econs 4. 2: eauto. replace gs with (Succ def); ss.
     }
     { des. set (Succ := (fun _: A => gt)). exists gs, (ord_tree_cons Succ).
-      econs 4. 2: eauto. replace gt with (Succ def); ss.
+      econs 5. 2: eauto. replace gt with (Succ def); ss.
     }
     { des. set (Succ := (fun _: A => gs)). exists (ord_tree_cons Succ), gt.
-      econs 5. 2: eauto. replace gs with (Succ def); ss.
+      econs 6. 2: eauto. replace gs with (Succ def); ss.
     }
     { hexploit ord_tree_join.
       { instantiate (2:= A).
@@ -748,9 +824,9 @@ Section PROOF.
       i. des. eapply gen_exp_leR. 2: eauto. right. auto.
     }
     { des. set (Succ := (fun _: A => gt)). exists gs, (ord_tree_cons Succ).
-      econs 8. 2: eauto. replace gt with (Succ def); ss.
+      econs 9. 2: eauto. replace gt with (Succ def); ss.
     }
-    { exists (ord_tree_base A), (ord_tree_base A). econs 9; eauto. }
+    { exists (ord_tree_base A), (ord_tree_base A). econs 10; eauto. }
     { hexploit ord_tree_join.
       { instantiate (2:= A).
         instantiate (2:= (fun '(i_s, i_t) =>

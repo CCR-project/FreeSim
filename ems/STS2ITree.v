@@ -26,12 +26,24 @@ Section CONV.
             (fun st1 => decompile_STS step state_sort (proj1_sig st1))
       | STS.final z =>
         Ret (z)
+      (* | STS.vis => *)
+      (*   '(exist _ (event_sys fn args _) _) <- *)
+      (*   trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });; *)
+      (*   rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));; *)
+      (*   Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 }) *)
+      (*       (fun st1 => decompile_STS step state_sort (proj1_sig st1)) *)
       | STS.vis =>
-        '(exist _ (event_sys fn args _) _) <-
-        trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
-        rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
-        Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 })
-            (fun st1 => decompile_STS step state_sort (proj1_sig st1))
+        '(exist _ ev _) <- trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
+        match ev with
+        | event_out fn args =>
+            trigger (SyscallOut fn args (top1));;;
+            Vis (Choose {st1: state | @step st0 (Some (event_out fn args)) st1 })
+              (fun st1 => decompile_STS step state_sort (proj1_sig st1))
+        | event_in rv =>
+            trigger (SyscallIn rv);;;
+            Vis (Choose {st1: state | @step st0 (Some (event_in rv)) st1 })
+              (fun st1 => decompile_STS step state_sort (proj1_sig st1))
+        end
       end
   .
 
@@ -53,11 +65,17 @@ Section CONV.
     | STS.final z =>
       Ret (z)
     | STS.vis =>
-      '(exist _ (event_sys fn args _) _) <-
-      trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
-      rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
-      Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 })
-          (fun st1 => decompile_STS step state_sort (proj1_sig st1))
+        '(exist _ ev _) <- trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
+        match ev with
+        | event_out fn args =>
+            trigger (SyscallOut fn args (top1));;;
+              Vis (Choose {st1: state | @step st0 (Some (event_out fn args)) st1 })
+              (fun st1 => decompile_STS step state_sort (proj1_sig st1))
+        | event_in rv =>
+            trigger (SyscallIn rv);;;
+              Vis (Choose {st1: state | @step st0 (Some (event_in rv)) st1 })
+              (fun st1 => decompile_STS step state_sort (proj1_sig st1))
+        end
     end
   .
   Proof.
@@ -83,7 +101,7 @@ Section PROOF.
   Hypothesis wf_vis0 :
     forall (st0 : state) (ev0 ev1 : option event) (st1 st2 : state),
       state_sort0 st0 = vis ->
-      step0 st0 ev0 st1 -> step0 st0 ev1 st2 -> ev0 = ev1 -> st1 = st2.
+      step0 st0 ev0 st1 -> step0 st0 ev1 st2 -> ev0 = ev1 /\ st1 = st2.
 
   Hypothesis wf_vis_event0 :
     forall (st0 : state) (ev0 : option event) (st1 : state),
@@ -129,22 +147,22 @@ Section PROOF.
   Let STS_itree := decompile_STS step state_sort st_init.
   Let L1_itree := ModSemL.compile_itree STS_itree.
 
-  Hypothesis wf_syscall0 :
-    forall ev,
-      (exists st0 st1, (state_sort0 st0 = vis) /\ (step0 st0 (Some ev) st1)) ->
-      syscall_sem ev.
+  (* Hypothesis wf_syscall0 : *)
+  (*   forall ev, *)
+  (*     (exists st0 st1, (state_sort0 st0 = vis) /\ (step0 st0 (Some ev) st1)) -> *)
+  (*     syscall_sem ev. *)
 
-  Lemma wf_syscall :
-    forall ev,
-      (exists st0 st1, (state_sort st0 = vis) /\ (step st0 (Some ev) st1)) ->
-      syscall_sem ev.
-  Proof.
-    i. des. unfold step in *. unfold state_sort in *.
-    destruct st0. destruct st1. ss; clarify.
-    destruct o; ss; clarify.
-    2:{ destruct (state_sort0 s); ss; clarify. }
-    inv H0. eapply wf_syscall0; eauto.
-  Qed.
+  (* Lemma wf_syscall : *)
+  (*   forall ev, *)
+  (*     (exists st0 st1, (state_sort st0 = vis) /\ (step st0 (Some ev) st1)) -> *)
+  (*     syscall_sem ev. *)
+  (* Proof. *)
+  (*   i. des. unfold step in *. unfold state_sort in *. *)
+  (*   destruct st0. destruct st1. ss; clarify. *)
+  (*   destruct o; ss; clarify. *)
+  (*   2:{ destruct (state_sort0 s); ss; clarify. } *)
+  (*   inv H0. eapply wf_syscall0; eauto. *)
+  (* Qed. *)
 
   Hypothesis wf_finalize0:
     forall st0 rv, state_sort0 st0 = final rv -> finalize (rv) = Some rv.
@@ -206,20 +224,32 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
         destruct x. des. destruct x.
-        esplits; et.
-        mclo. eapply sim_indC_vis; i; ss; clarify.
-        rewrite bind_trigger in STEP.
-        dependent destruction STEP.
-        des. rename RETURN into STEP.
-        exists st2. eexists.
-        { auto. }
-        esplits. mclo. eapply sim_indC_demonic_tgt; ss; clarify.
-        i. dependent destruction STEP0.
-        destruct x.
-        esplits; et. mbase.
-        assert (st2 = x).
-        { eapply wf_vis. apply SRT. apply STEP. apply s. reflexivity. }
-        clarify.
+        * esplits; et.
+          mclo. eapply sim_indC_vis; i; ss; clarify.
+          rewrite bind_trigger in STEP.
+          dependent destruction STEP.
+          exists st1. eexists.
+          { auto. }
+          esplits. mclo. eapply sim_indC_demonic_tgt; ss; clarify.
+          i. dependent destruction STEP.
+          destruct x.
+          esplits; et. mbase.
+          assert (st1 = x).
+          { eapply wf_vis. apply SRT. apply e. apply s. }
+          clarify.
+        * esplits; et.
+          mclo. eapply sim_indC_vis; i; ss; clarify.
+          rewrite bind_trigger in STEP.
+          dependent destruction STEP.
+          exists st1. eexists.
+          { auto. }
+          esplits. mclo. eapply sim_indC_demonic_tgt; ss; clarify.
+          i. dependent destruction STEP.
+          destruct x.
+          esplits; et. mbase.
+          assert (st1 = x).
+          { eapply wf_vis. apply SRT. apply e. apply s. }
+          clarify.
     Unshelve. all: try exact 0.
   Qed.
 
@@ -266,64 +296,49 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         left. ii. apply H. eauto. }
       destruct CASE.
       + eapply sim_indC_vis_stuck_tgt; eauto.
-      + set (cont := fun x_ : {ev' : event | exists st1, step st0 (Some ev') st1} =>
-                       (let (x, _) := x_ in
-                        match x with
-                        | event_sys fn args _ =>
-                          ` rv0 : Any.t <-
-                                  trigger
-                                    (Syscall fn args
-                                             (fun rv0 : Any.t =>
-                                                exists st1, step st0 (Some (event_sys fn args rv0)) st1));;
-                                  Vis
-                                    (Choose {st1 | step st0 (Some (event_sys fn args rv0)) st1})
-                                    (fun
-                                        st1 : {st1 | step st0 (Some (event_sys fn args rv0)) st1}
-                                      => decompile_STS step state_sort (st1 $))
-                        end)).
-        destruct H.
+      + destruct H.
         eapply sim_indC_demonic_src; ss; clarify.
         { rewrite unfold_decompile_STS. rewrite SRT. ss. }
-        exists (cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) x H)).
-        destruct x. eexists.
-        { rewrite unfold_decompile_STS. rewrite SRT. ss. rewrite bind_trigger.
-          eapply (ModSemL.step_choose cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) (event_sys fn args rv) H)). }
-        esplits; et.
-        mclo2. destruct H. rename s into STEP. subst cont.
-        set (cont := fun rv0 =>
-                       Vis
-                         (Choose
-                            {st1 | step st0 (Some (event_sys fn args rv0)) st1})
-                         (fun
-                             st1 : {st1 | step st0 (Some (event_sys fn args rv0)) st1} =>
-                             decompile_STS step state_sort (st1 $))).
-        eapply sim_indC_vis; eauto.
-        i. ss.
-        exploit wf_vis_norm.
-        { instantiate (1:= L1). exists L0. reflexivity. }
-        { ss. apply SRT. }
-        { apply STEP. }
-        { apply STEP0. }
-        i. des. clarify.
-        exists (cont rv). eexists.
-        { ss. rewrite bind_trigger. subst cont. ss.
-          apply (@ModSemL.step_syscall fn args rv (fun rv0 : Any.t => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : Any.t => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
-          2:{ exists st_tgt1. auto. }
-          apply wf_syscall.
-          exists st0, st_tgt1. auto. }
-        esplits. mclo2. eapply sim_indC_demonic_src; ss; clarify.
-        subst cont. ss.
-        set (cont :=
-               (fun
-                   st1 :
-                     {st1 | step st0
-                                 (Some (event_sys fn args rv))
-                                 st1} =>
-                   decompile_STS step state_sort (st1 $))).
-        exists (cont (exist (fun st1 => step st0 (Some (event_sys fn args rv)) st1) st_tgt1 STEP)).
-        eexists.
-        { econs. }
-        esplits; et. mbase2.
+        des.
+        destruct x.
+        * esplits.
+          { rewrite unfold_decompile_STS. rewrite SRT. ss. rewrite bind_trigger. unshelve eapply (ModSemL.step_choose _); et. }
+          mclo2.
+          eapply sim_indC_vis; eauto.
+          i. ss.
+          exploit wf_vis_norm.
+          { instantiate (1:= L1). exists L0. reflexivity. }
+          { ss. apply SRT. }
+          { apply STEP. }
+          { apply H. }
+          i. des. clarify.
+          esplits.
+          { rewrite bind_trigger. ss. unshelve econs. }
+          mclo2.
+          eapply sim_indC_demonic_src; ss.
+          unshelve esplits.
+          2: { unshelve econs. unshelve eauto. }
+          ss.
+          mbase2.
+        * esplits.
+          { rewrite unfold_decompile_STS. rewrite SRT. ss. rewrite bind_trigger. unshelve eapply (ModSemL.step_choose _); et. }
+          mclo2.
+          eapply sim_indC_vis; eauto.
+          i. ss.
+          exploit wf_vis_norm.
+          { instantiate (1:= L1). exists L0. reflexivity. }
+          { ss. apply SRT. }
+          { apply STEP. }
+          { apply H. }
+          i. des. clarify.
+          esplits.
+          { rewrite bind_trigger. ss. unshelve econs. }
+          mclo2.
+          eapply sim_indC_demonic_src; ss.
+          unshelve esplits.
+          2: { unshelve econs. unshelve eauto. }
+          ss.
+          mbase2.
     Unshelve. all: try exact 0.
   Qed.
 
