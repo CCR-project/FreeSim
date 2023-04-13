@@ -7,6 +7,115 @@ Require Import SimSTSIndex.
 Set Implicit Arguments.
 
 
+Module Galois.
+  Record t A B: Type :=
+    mk {
+        alpha: (A -> Prop) -> (B -> Prop);
+        gamma: (B -> Prop) -> (A -> Prop);
+        alpha_mon: forall a0 a1 (LE: a0 <1= a1), alpha a0 <1= alpha a1;
+        gamma_mon: forall b0 b1 (LE: b0 <1= b1), gamma b0 <1= gamma b1;
+        adjunct_iso0: forall a b, (alpha a <1= b) -> (a <1= gamma b);
+        adjunct_iso1: forall a b, (a <1= gamma b) -> (alpha a <1= b);
+      }.
+
+  Lemma counit A B (c: t A B)
+    :
+    forall b, c.(alpha) (c.(gamma) b) <1= b.
+  Proof.
+    i. eapply c.(adjunct_iso1) in PR; eauto.
+  Qed.
+
+  Lemma unit A B (c: t A B)
+    :
+    forall a, a <1= c.(gamma) (c.(alpha) a).
+  Proof.
+    i. eapply c.(adjunct_iso0) in PR; eauto.
+  Qed.
+
+  Program Definition refl A: t A A := mk id id _ _ _ _.
+  Next Obligation.
+    eapply H; eauto.
+  Qed.
+
+  Program Definition trans A B C (f: t A B) (g: t B C): t A C :=
+    mk (compose g.(alpha) f.(alpha)) (compose f.(gamma) g.(gamma)) _ _ _ _.
+  Next Obligation.
+    unfold compose in *. eapply g.(alpha_mon); [|eapply PR].
+    eapply f.(alpha_mon); eauto.
+  Qed.
+  Next Obligation.
+    unfold compose in *. eapply f.(gamma_mon); [|eapply PR].
+    eapply g.(gamma_mon); eauto.
+  Qed.
+  Next Obligation.
+    eapply f.(adjunct_iso0); [|eapply PR].
+    eapply g.(adjunct_iso0). eauto.
+  Qed.
+  Next Obligation.
+    eapply g.(adjunct_iso1); [|eapply PR].
+    eapply f.(adjunct_iso1). eauto.
+  Qed.
+End Galois.
+
+
+Section REPLAY.
+  Hint Resolve cpn1_wcompat: paco.
+
+  Variable A: Type.
+  Variable B: Type.
+  Variable F: (A -> Prop) -> (A -> Prop).
+  Variable G: (B -> Prop) -> (B -> Prop).
+  Variable c: Galois.t A B.
+
+  Definition replay := forall a, c.(Galois.alpha) (F a) <1= G (c.(Galois.alpha) a).
+
+  Hypothesis F_mon: monotone1 F. Hint Resolve F_mon: paco.
+  Hypothesis G_mon: monotone1 G. Hint Resolve G_mon: paco.
+  Hypothesis REPLAY: replay.
+
+  Lemma replay_coind_step r g a
+        (STEP: a <1= F (c.(Galois.gamma) (gpaco1 G (cpn1 G) g g)))
+    :
+    a <1= c.(Galois.gamma) (gpaco1 G (cpn1 G) r g).
+  Proof.
+    eapply c.(Galois.adjunct_iso0). i. gstep. eapply G_mon.
+    { eapply REPLAY. eapply c.(Galois.alpha_mon); [|eapply PR]. eapply STEP. }
+    eapply (Galois.counit c).
+  Qed.
+
+  Lemma replay_implication
+    :
+    c.(Galois.alpha) (paco1 F bot1) <1= paco1 G bot1.
+  Proof.
+    ginit. gcofix CIH. eapply c.(Galois.adjunct_iso1).
+    i. punfold PR. eapply replay_coind_step; [|eapply PR].
+    i. eapply F_mon; eauto. eapply c.(Galois.adjunct_iso0).
+    i. gbase. eapply CIH. eapply c.(Galois.alpha_mon); [|eapply PR1].
+    i. pclearbot. auto.
+  Qed.
+End REPLAY.
+
+Lemma replay_refl A (F: (A -> Prop) -> (A -> Prop))
+  :
+  replay F F (Galois.refl A).
+Proof.
+  rr. i. ss.
+Qed.
+
+Lemma replay_trans A B C
+      (F: (A -> Prop) -> (A -> Prop))
+      (G: (B -> Prop) -> (B -> Prop))
+      (H: (C -> Prop) -> (C -> Prop))
+      c0 c1
+      (REPLAY0: replay F G c0)
+      (REPLAY1: replay G H c1)
+  :
+  replay F H (Galois.trans c0 c1).
+Proof.
+  rr. i. ss. eapply REPLAY1. eapply c1.(Galois.alpha_mon); [|eapply PR].
+  eapply REPLAY0.
+Qed.
+
 
 Module REPLAY.
 Section SIM.
@@ -514,7 +623,7 @@ Section SIM.
       hexploit SIM0; eauto. }
     { eapply BOTH; eauto. }
   Qed.
-  
+
 
   Definition _fromI: (state L0 * state L1) -> (Ord.t * Ord.t * state L0 * state L1) :=
     fun '(s0, s1) => (Ord.O, Ord.O, s0, s1).
