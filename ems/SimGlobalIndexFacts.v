@@ -1698,6 +1698,24 @@ Qed.
 End ADEQUACY.
 End SIM.
 
+Section DUALMORE.
+
+  Definition dualize_k {E F} (k: E ~> itree (F +' eventE)): E ~> itree (F +' eventE) := fun T e => dualize (k T e).
+
+  Theorem dualize_interp {E F} {R} (f: E ~> itree (F +' eventE)) (body: itree (E +' eventE) R):
+    dualize (interp (case_ f trivial_Handler) body) ≈ interp (case_ (dualize_k f) trivial_Handler) (dualize body).
+  Proof.
+    unfold dualize. rewrite ! interp_interp. eapply eutt_interp; try refl.
+    ii. destruct a.
+    - cbn. unfold trivial_Handler. rewrite interp_trigger. cbn. unfold dualize_k. unfold dualize.
+      setoid_rewrite tau_eutt. rewrite bind_ret_r.
+      eapply eutt_interp; try refl.
+    - cbn. unfold trivial_Handler. rewrite interp_trigger. cbn.
+      destruct e; cbn; rewrite interp_trigger; irw; f_equiv; ii; refl.
+  Qed.
+
+End DUALMORE.
+
 Hint Constructors flagC: core.
 Hint Resolve flagC_mon: paco.
 Hint Constructors bindR: core.
