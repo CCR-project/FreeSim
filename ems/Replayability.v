@@ -1,9 +1,4 @@
 Require Import Coqlib.
-Require Import STS.
-Require Import Behavior.
-From Ordinal Require Import Ordinal Arithmetic.
-Require Import SimSTSIndex.
-
 Set Implicit Arguments.
 
 
@@ -117,8 +112,727 @@ Proof.
 Qed.
 
 
-Module REPLAY.
+Require Import ITreelib.
+From Ordinal Require Import Ordinal Arithmetic.
+Require Import SimGlobalIndex.
+Require Import SimGlobalAlts.
+
+Lemma trigger_inj2 E X R (e0 e1: E X) (k0 k1: X -> itree E R)
+      (EQ: trigger e0 >>= k0 = trigger e1 >>= k1)
+  :
+  e0 = e1 /\ k0 = k1.
+Proof.
+  eapply f_equal with (f:=_observe) in EQ. compute in EQ.
+  dependent destruction EQ.
+  split; auto. extensionality x0.
+  eapply equal_f in x. instantiate (1:=x0) in x.
+  eapply f_equal with (f:=_observe) in x. compute in x.
+  eapply observe_eta. auto.
+Qed.
+
+Require Import WFLib.
+
 Section SIM.
+  Variable E: Type -> Type.
+
+  Section IMPLICIT.
+    Variable f_src f_tgt: Ord.t.
+
+    Definition isim_galois_alpha
+               R0 R1
+               (r: forall (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (f_src' f_tgt': Ord.t)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      (<<SIM: r itr_src itr_tgt>>) /\
+        (<<SRC: Ord.le f_src f_src'>>) /\ (<<TGT: Ord.le f_tgt f_tgt'>>).
+
+    Definition isim_galois_gamma
+               R0 R1
+               (r: forall (f_src f_tgt: Ord.t)
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      forall f_src' f_tgt' (SRC: Ord.le f_src f_src') (TGT: Ord.le f_tgt f_tgt'),
+        r f_src' f_tgt' itr_src itr_tgt.
+
+    Lemma isim_galois_adjunct_iso0
+          R0 R1
+      :
+      forall a b, @isim_galois_alpha R0 R1 a <4= b -> a <2= @isim_galois_gamma R0 R1 b.
+    Proof.
+      i. rr. i. eapply H; eauto. rr. esplits; eauto.
+    Qed.
+
+    Lemma isim_galois_adjunct_iso1
+          R0 R1
+      :
+      forall a b, a <2= @isim_galois_gamma R0 R1 b -> @isim_galois_alpha R0 R1 a <4= b.
+    Proof.
+      i. rr in PR. des; subst. eapply H in SIM. rr in SIM. eapply SIM; eauto.
+    Qed.
+
+    Lemma psim_replay_isim
+          r
+          R0 R1 (RR: R0 -> R1 -> Prop)
+      :
+      @isim_galois_alpha R0 R1 (@_simg_alt_imp E r _ _ RR)
+      <4=
+        (@_simg E (fun R0 R1 RR => @isim_galois_alpha R0 R1 (r R0 R1 (fun r0 r1 => exists i0 i1, RR i0 i1 r0 r1))) _ _ (fun _ _ => RR)).
+    Proof.
+      assert (REQ: forall R0 R1 (RR: R0 -> R1 -> Prop), (fun (r0 : R0) (r1 : R1) => exists _ _ : Ord.t, RR r0 r1) = RR).
+      { i. extensionality r0. extensionality r1. eapply prop_ext. split; i; des; eauto. }
+      i. rr in PR. des; subst.
+      revert x0 x1 SRC TGT.
+      induction SIM using _simg_alt_imp_ind2; i.
+      { inv SRC. inv TGT. eapply simg_ret; eauto; try refl. }
+      { inv SIM. inv TGT. inv SRC. inv REL. clarify.
+        econs 2. i. subst. r. esplits; eauto. destruct x_tgt.
+        eapply trigger_inj2 in H0. eapply trigger_inj2 in H1. des; subst.
+        rewrite REQ; auto.
+      }
+      { inv SIM. inv TGT. inv SRC. inv REL.
+        eapply trigger_inj2 in H0. eapply trigger_inj2 in H1. des; subst.
+        econs 3. r. esplits; eauto.
+        rewrite REQ; auto.
+      }
+      { inv TGT. inv SRC. eapply simg_event. i. subst.
+        specialize (SIM x_tgt _ eq_refl). inv SIM. inv REL.
+        eapply trigger_inj2 in H0. eapply trigger_inj2 in H1. des; subst.
+        rr. esplits; eauto.
+        rewrite REQ; auto.
+      }
+      { inv SIM; des.
+        { eapply simg_tauR; auto. inv REL.
+          { eapply simg_tauL; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_takeL; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_tauR; auto. inv SIM. des; eauto. }
+        { eapply simg_chooseR; auto. i. specialize (REL x). inv REL.
+          { inv H.
+            { eapply simg_tauL; auto. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { eapply simg_takeL; auto. i. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+          }
+          { des. eapply IH; eauto. etrans; eauto. eapply Ord.S_le. }
+        }
+        { eapply simg_takeR; auto. eexists. inv REL.
+          { eapply simg_tauL; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_takeL; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_takeR; auto. inv SIM. des; eauto. }
+      }
+      { inv SIM; des.
+        { eapply simg_tauL; auto. inv REL.
+          { eapply simg_tauR; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseR; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_takeR; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_tauL; auto. inv SIM. des; eauto. }
+        { eapply simg_chooseL; auto. eexists. inv REL.
+          { eapply simg_tauR; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_chooseR; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_takeR; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_chooseL; auto. eexists. eapply IH; eauto. }
+        { eapply simg_takeL; eauto. i. specialize (REL x). inv REL.
+          { inv H.
+            { eapply simg_tauR; auto. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { eapply simg_chooseR; auto. i. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { des. eapply simg_takeR; auto. eexists. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+          }
+          { des. eapply IH; eauto. etrans; eauto. eapply Ord.S_le. }
+        }
+      }
+    Qed.
+  End IMPLICIT.
+
+
+  Section EXPLICIT.
+    Variable wfo: WF.
+
+    Definition esim_galois_alpha
+               R0 R1
+               (r: forall (o: wfo.(T))
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (f_src f_tgt: Ord.t)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      exists o,
+        (<<SIM: r o itr_src itr_tgt>>) /\
+          (<<SRC: f_src = Ord.from_wf wfo.(wf) o>>) /\ (<<TGT: f_tgt = Ord.from_wf wfo.(wf) o>>).
+
+    Definition esim_galois_gamma
+               R0 R1
+               (r: forall (f_src f_tgt: Ord.t)
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (o: wfo.(T))
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      r (Ord.from_wf wfo.(wf) o) (Ord.from_wf wfo.(wf) o) itr_src itr_tgt.
+
+    Lemma esim_galois_adjunct_iso0
+          R0 R1
+      :
+      forall a b, @esim_galois_alpha R0 R1 a <4= b -> a <3= @esim_galois_gamma R0 R1 b.
+    Proof.
+      i. rr. i. eapply H; eauto. rr. esplits; eauto.
+    Qed.
+
+    Lemma esim_galois_adjunct_iso1
+          R0 R1
+      :
+      forall a b, a <3= @esim_galois_gamma R0 R1 b -> @esim_galois_alpha R0 R1 a <4= b.
+    Proof.
+      i. rr in PR. des; subst. eapply H in SIM. rr in SIM. eapply SIM; eauto.
+    Qed.
+
+    Lemma psim_replay_esim
+          r
+          R0 R1 (RR: R0 -> R1 -> Prop)
+      :
+      @esim_galois_alpha R0 R1 (@_simg_alt_exp E wfo r _ _ RR)
+      <4=
+        (@_simg E (fun R0 R1 RR => @esim_galois_alpha R0 R1 (r R0 R1 (fun r0 r1 => exists i0 i1, RR i0 i1 r0 r1))) _ _ (fun _ _ => RR)).
+    Proof.
+      assert (REQ: forall R0 R1 (RR: R0 -> R1 -> Prop), (fun (r0 : R0) (r1 : R1) => exists _ _ : Ord.t, RR r0 r1) = RR).
+      { i. extensionality r0. extensionality r1. eapply prop_ext. split; i; des; eauto. exists Ord.O, Ord.O. auto. }
+      i. rr in PR. des; subst. inv SIM; des.
+      { inv SRC. inv TGT. eapply simg_ret; eauto; try refl. }
+      { inv OBS. inv REL. inv H. inv H0. des. clarify.
+        eapply trigger_inj2 in H1. eapply trigger_inj2 in H2. des; subst.
+        econs 2. r. esplits; eauto. destruct x_src, x_tgt.
+        rewrite REQ; eauto.
+      }
+      { inv OBS. inv REL. inv H. inv H0. des. clarify.
+        eapply trigger_inj2 in H1. eapply trigger_inj2 in H2. des; subst.
+        econs 3. r. esplits; eauto. rewrite REQ; eauto.
+      }
+      { inv H. inv H1. eapply simg_event. i. subst.
+        specialize (H0 x_tgt _ eq_refl). des. inv H0. inv REL.
+        eapply trigger_inj2 in H0. eapply trigger_inj2 in H1. des; subst.
+        rr. rewrite REQ. esplits; eauto.
+        rewrite REQ; eauto. eapply REL0.
+      }
+      { inv SIM; des.
+        { eapply simg_tauR; auto. inv REL.
+          { eapply simg_tauL; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_takeL; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_tauR; auto. inv SIM. des; eauto. }
+        { eapply simg_chooseR; auto. i. specialize (REL x). inv REL.
+          { inv H.
+            { eapply simg_tauL; auto. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { eapply simg_takeL; auto. i. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+          }
+          { des. eapply IH; eauto. etrans; eauto. eapply Ord.S_le. }
+        }
+        { eapply simg_takeR; auto. eexists. inv REL.
+          { eapply simg_tauL; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_takeL; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_takeR; auto. inv SIM. des; eauto. }
+      }
+      { inv SIM; des.
+        { eapply simg_tauL; auto. inv REL.
+          { eapply simg_tauR; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseR; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_takeR; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_tauL; auto. inv SIM. des; eauto. }
+        { eapply simg_chooseL; auto. eexists. inv REL.
+          { eapply simg_tauR; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_chooseR; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_takeR; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+        { eapply simg_chooseL; auto. eexists. eapply IH; eauto. }
+        { eapply simg_takeL; eauto. i. specialize (REL x). inv REL.
+          { inv H.
+            { eapply simg_tauR; auto. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { eapply simg_chooseR; auto. i. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+            { des. eapply simg_takeR; auto. eexists. eapply simg_progress.
+              { rr. esplits; eauto. rewrite REQ; eauto. }
+              { eapply Ord.S_lt. }
+              { eapply Ord.S_lt. }
+            }
+          }
+          { des. eapply IH; eauto. etrans; eauto. eapply Ord.S_le. }
+        }
+      }
+    Qed.
+  End IMPLICIT.
+
+
+      eapply simg_takeL; auto. i. eapply IH; eauto. }
+
+      }
+      }
+      { eapply simg_takeR; auto. eexists. inv REL.
+        { eapply simg_tauL; auto. eapply simg_progress.
+          { rr. esplits; eauto. rewrite REQ; eauto. }
+          { eapply Ord.S_lt. }
+          { eapply Ord.S_lt. }
+        }
+        { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+          { rr. esplits; eauto. rewrite REQ; eauto. }
+          { eapply Ord.S_lt. }
+          { eapply Ord.S_lt. }
+        }
+        { eapply simg_takeL; auto. i. eapply simg_progress.
+          { rr. esplits; eauto. rewrite REQ; eauto. }
+          { eapply Ord.S_lt. }
+          { eapply Ord.S_lt. }
+        }
+      }
+      { eapply simg_takeR; auto. inv SIM. des; eauto. }
+      }
+      { in
+
+        { des. eapply IH; eauto. etrans; eauto. eapply Ord.S_le. }
+      }
+
+          admit ".
+
+
+            eapply IH. }
+
+          simg_tauL; auto. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { des. eapply simg_chooseL; auto. eexists. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+          { eapply simg_takeL; auto. i. eapply simg_progress.
+            { rr. esplits; eauto. rewrite REQ; eauto. }
+            { eapply Ord.S_lt. }
+            { eapply Ord.S_lt. }
+          }
+        }
+
+                rr. esplits; eauto. rewrite REQ; auto. }
+
+
+
+        unfold subevent, resum, ReSum_inl, resum, ReSum_id, id_, Id_IFun in H0. ss.
+
+        inv H0. inv H1.
+
+
+        inv REL.
+        eapply trigger_inj in H0. eapply trigger_inj in H1. subst.
+        econs 3. r. esplits; eauto.
+        replace (fun (r0 : R0) (r1 : R1) => exists _ _ : Ord.t, RR r0 r1) with RR; auto.
+        extensionality r0. extensionality r1. eapply prop_ext. split; i; des; eauto.
+      }
+
+
+extensionality r0.
+
+
+        auto.
+
+        eapply f_equal with (f:=_observe) in H1. inv H1. des_ifs. ss.
+
+
+ITree.trigger
+        Set Printing All.
+
+
+
+      revert x2 x3.
+
+      inv SIM.
+
+
+
+    Definition isim_galois_alpha
+               R0 R1 (RR: R0 -> R1 -> Prop)
+               (r: forall (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (f_src' f_tgt': Ord.t)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      (<<SIM: r itr_src itr_tgt>>) /\
+        (<<SRC: f_src' = f_src>>) /\ (<<TGT: f_tgt' = f_tgt>>).
+
+    Definition isim_galois_gamma
+               R0 R1 (RR: R0 -> R1 -> Prop)
+               (r: forall (f_src f_tgt: Ord.t)
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      r f_src f_tgt itr_src itr_tgt.
+
+    Lemma isim_galois_adjunct_iso0
+          R0 R1 (RR: R0 -> R1 -> Prop)
+      :
+      forall a b, isim_galois_alpha RR a <4= b -> a <2= isim_galois_gamma RR b.
+    Proof.
+      i. rr. eapply H; eauto. rr. esplits; eauto.
+    Qed.
+
+    Lemma isim_galois_adjunct_iso1
+          R0 R1 (RR: R0 -> R1 -> Prop)
+      :
+      forall a b, a <2= isim_galois_gamma RR b -> isim_galois_alpha RR a <4= b.
+    Proof.
+      i. rr in PR. des; subst. eapply H in SIM. rr in SIM. auto.
+    Qed.
+
+    Lemma psim_replay_isim
+          R0 R1 (RR: R0 -> R1 -> Prop)
+          r
+      :
+      isim_galois_alpha RR (@_simg_alt_imp E r _ _ RR) <4= (_simg (fun R0 R1 RR => isim_galois_alpha RR (r R0 R1 (fun _ _ => RR)))).
+
+
+
+                                                 (fun R0 R1 RR => isim_galois_alpha (y R0 R1 (fun r0 r1 => exists i0 i1, RR i0 i1 r0 r1)))).
+
+
+
+          (x R0 R1 (fun _ _ => RR)) <4=
+          _simg (fun R0 R1 RR => isim_galois_alpha (x R0 R1 (fun _ _ => RR))) (fun _ _ => RR).
+
+    Lemma psim_replay_isim
+      :
+      forall x y,
+        isim_galois_alpha
+          (_simg_alt_imp (fun R0 R1 RR => isim_galois_alpha (y R0 R1 (fun r0 r1 => exists i0 i1, RR i0 i1 r0 r1)))) <4=
+          _simg y (fun _ _ => RR).
+
+      (isim_galois_alpha
+
+
+        (r: forall R0 R1 (RR: R0 -> R1 -> Prop)
+                        (itr_src: itree (E +' ModSemE.eventE) R0)
+                        (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop),
+        isim_galois_alpha (_simg_alt_imp (fun R0 R1 RR itr_src itr_tgt =>
+
+
+
+    Definition isim_galois_alpha
+               (r: forall (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (f_src' f_tgt': Ord.t)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      (<<SIM: r itr_src itr_tgt>>) /\
+        (<<SRC: f_src' = f_src>>) /\ (<<TGT: f_tgt' = f_tgt>>).
+
+    Definition isim_galois_gamma
+               (r: forall (f_src f_tgt: Ord.t)
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      r f_src f_tgt itr_src itr_tgt.
+
+    Lemma isim_galois_adjunct_iso0
+      :
+      forall a b, isim_galois_alpha a <4= b -> a <2= isim_galois_gamma b.
+    Proof.
+      i. rr. eapply H; eauto. rr. esplits; eauto.
+    Qed.
+
+    Lemma isim_galois_adjunct_iso1
+      :
+      forall a b, a <2= isim_galois_gamma b -> isim_galois_alpha a <4= b.
+    Proof.
+      i. rr in PR. des; subst. eapply H in SIM. rr in SIM. auto.
+    Qed.
+
+    Lemma psim_replay_isim
+      :
+      forall (r: forall R0 R1 (RR: R0 -> R1 -> Prop)
+                        (itr_src: itree (E +' ModSemE.eventE) R0)
+                        (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop),
+        isim_galois_alpha (_simg_alt_imp (fun R0 R1 RR itr_src itr_tgt =>
+
+                                            E R0 R1 RR)
+        <2=
+          _simg r (fun _ _ => RR) itr_src itr_tgt.
+
+  Definition replay := forall a, c.(Galois.alpha) (F a) <1= G (c.(Galois.alpha) a).
+
+
+                (isim_galois_alpha a).
+
+
+    >>)
+    .
+
+
+
+
+
+    Definition isim_galois_alpha
+               (r: forall (R0 R1: Type) (RR: R0 -> R1 -> Prop)
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (R0 R1: Type) (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+               (f_src' f_tgt': Ord.t)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      forall RR' (IMPL: forall r0 r1, RR f_src f_tgt r0 r1 -> RR' r0 r1: Prop),
+        (<<SIM: r R0 R1 RR' itr_src itr_tgt>>) /\
+          (<<SRC: f_src' = f_src>>) /\ (<<TGT: f_tgt' = f_tgt>>).
+
+    Definition isim_galois_gamma
+               (r: forall (R0 R1: Type) (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop)
+                          (f_src f_tgt: Ord.t)
+                          (itr_src: itree (E +' ModSemE.eventE) R0)
+                          (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop)
+               (R0 R1: Type) (RR: R0 -> R1 -> Prop)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      exists RR' (SIM: forall r0 r1, RR r0 r1 -> RR' f_src f_tgt r0 r1: Prop),
+        (<<SIM: r R0 R1 RR' f_src f_tgt itr_src itr_tgt>>)
+    .
+
+    Lemma isim_galois_adjunct_iso0
+      :
+      forall a b, isim_galois_alpha a <7= b -> a <5= isim_galois_gamma b.
+    Proof.
+      i. rr. eexists (fun _ _ => x2). esplits; eauto.
+      eapply H. rr. esplits; eauto.
+    Qed.
+
+    Lemma isim_galois_adjunct_iso1
+      :
+      forall a b, a <5= isim_galois_gamma b -> isim_galois_alpha a <7= b.
+    Proof.
+      i. rr in PR. des; subst. eapply H in SIM. rr in SIM. des.
+
+
+      replace x2 with (fun (f_src' f_tgt' : Ord.t) (r0 : x0) (r1 : x1) =>
+                         f_src' = f_src -> f_tgt' = f_tgt -> x2 f_src f_tgt r0 r1); auto.
+      extensionality r0. extensionality r1.
+      extensionality i0. extensionality i1.
+      eapply prop_ext. split; i; des; subst; eauto. eapply H0; eauto. splits; eauto.
+
+      [eapply H|eauto].
+      { rr. esplits; eauto. i.
+
+      { eapply H.
+
+      apply H. rr. esplits; eauto.
+      replace (fun (r0 : x0) (r1 : x1) => f_src = f_src -> f_tgt = f_tgt -> x2 r0 r1) with x2; auto.
+      extensionality r0. extensionality r1.
+      eapply prop_ext. split; i; des; eauto.
+    Qed.
+
+    Lemma isim_galois_adjunct_iso1
+      :
+      forall a b, a <5= isim_galois_gamma b -> isim_galois_alpha a <7= b.
+    Proof.
+      i. rr in PR. des; subst. eapply H in SIM. rr in SIM.
+      replace x2 with (fun (f_src' f_tgt' : Ord.t) (r0 : x0) (r1 : x1) =>
+                         f_src' = f_src -> f_tgt' = f_tgt -> x2 f_src f_tgt r0 r1); auto.
+      extensionality r0. extensionality r1.
+      extensionality i0. extensionality i1.
+      eapply prop_ext. split; i; des; subst; eauto. eapply H0; eauto. splits; eauto.
+
+      eapply H; eauto.
+    Qed.
+
+    Lemma psim_replay_isim
+      :
+      forall (a: forall (itr_src: itree (E +' ModSemE.eventE) R0)
+                        (itr_tgt: itree (E +' ModSemE.eventE) R1), Prop),
+        isim_galois_alpha (_simg_alt_imp E R0 R1 RR) <2= simg (fun _ _ => RR) (isim_galois_alpha a).
+
+
+  Definition replay := forall a, c.(Galois.alpha) (F a) <1= G (c.(Galois.alpha) a).
+
+
+      rr. apply H. rr. esplits; eauto.
+    Qed.
+
+
+
+        adjunct_iso0: forall a b, (alpha a <1= b) -> (a <1= gamma b);
+        adjunct_iso1: forall a b, (a <1= gamma b) -> (alpha a <1= b);
+
+
+               (f_src' f_tgt': Ord.t)
+               (itr_src: itree (E +' ModSemE.eventE) R0)
+               (itr_tgt: itree (E +' ModSemE.eventE) R1): Prop :=
+      (<<SRC: f_src' = f_src>>) /\ (<<TGT: f_tgt' = f_tgt>>) /\ (<<SIM: a itr_src itr_tgt>>).
+
+
+    Ord.t -> Ord.t ->
+    itree (E +' ModSemE.eventE) R0 -> itree (E +' ModSemE.eventE) R1
+
+    Prop
+
+
+    (
+
+  Variable R0 R1: Type.
+  Variable (RR: R0 -> R1 -> Prop).
+
+
+                                  simg_alt_imp
+
+  Lemma psim_replay_isim f_src f_tgt
+    :
+
+
 
   Variable L0 L1: semantics.
 
