@@ -1603,7 +1603,7 @@ Theorem adequacy_global_itree itr_src itr_tgt o_src0 o_tgt0
     <1=
     Beh.of_program (@ModSemL.compile_itree CONFS (initialize itr_src)).
 Proof.
-  unfold Beh.of_program. ss. i. eapply adequacy_aux; et. eapply adequacy_global_itree_aux; et.
+  unfold Beh.of_program. ss. i. eapply adequacy; et. eapply adequacy_global_itree_aux; et.
 Qed.
 
 
