@@ -556,7 +556,7 @@ Section SIM.
       eapply IHO; eauto.
   Qed.
 
-  Lemma adequacy_aux
+  Theorem adequacy
         i_src0 i_tgt0 st_src0 st_tgt0
         (SIM: sim i_src0 i_tgt0 st_src0 st_tgt0)
     :
