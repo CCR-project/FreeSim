@@ -916,74 +916,6 @@ Proof.
   - right. esplits; eauto. { f. eauto. } f. eauto.
 Qed.
 
-(* Lemma eqitree_inv_bind: *)
-(*   forall {A B : Type} {E : Type -> Type} {X : Type} (ma : itree E A) *)
-(*     (kab : A -> itree E B) (e : E X) (kxb : X -> itree E B), *)
-(*   ` x : _ <- ma;; kab x = trigger e >>= kxb -> *)
-(*   (exists kca : X -> itree E A, *)
-(*      ma = e kca /\ (forall x : X, ` x : _ <- kca x;; kab x = kxb x)) \/ *)
-(*   (exists a : A, ma = Ret a /\ kab a = Vis e kxb). *)
-(* Proof. *)
-(*   i. f in H. eapply eqitree_inv_bind_vis in H. des. *)
-(*   - left. esplits; eauto. { f. eauto. } i. f. eauto. *)
-(*   - right. esplits; eauto. { f. eauto. } f. eauto. *)
-(* Qed. *)
-
-(* Lemma mapC_grespectful: grespectful mapC. *)
-(* Proof. *)
-(*   econs; eauto with paco. *)
-(*   ii. inv PR. csc. *)
-(*   (* revert_until GF. gcofix CIH. i. *) *)
-(*   eapply GF in SIM. *)
-(*   remember (` r0 : x0 <- x5;; Ret (f0 r0)) as tmp0. *)
-(*   remember (` r1 : x1 <- x6;; Ret (f1 r1)) as tmp1. *)
-(*   (* remember (` r0 : x7 <- x12;; Ret (f0 r0)) as tmp0. *) *)
-(*   (* remember (` r1 : x8 <- x13;; Ret (f1 r1)) as tmp1. *) *)
-(*   revert Heqtmp0 Heqtmp1. *)
-(*   rename r into rrr. *)
-(*   induction SIM using _simg_ind2; intros EQ0 EQ1; irw in EQ0; irw in EQ1; csc. *)
-(*   { sym in EQ0. eapply eqitree_inv_bind_ret in EQ0. *)
-(*     sym in EQ1. eapply eqitree_inv_bind_ret in EQ1. *)
-(*     des. clarify. gstep. econs 1; eauto. } *)
-(*   { sym in EQ0. eapply eqitree_inv_bind_vis in EQ0. *)
-(*     sym in EQ1. eapply eqitree_inv_bind_vis in EQ1. *)
-(*     des; rewrite <- bind_trigger in *; clarify. *)
-(*     - gstep. econs 2; eauto. i. subst. gbase. *)
-(* Abort. *)
-
-(* Theorem simg_map *)
-(*         R0 R1 (RR: Ord.t -> Ord.t -> R0 -> R1 -> Prop) *)
-(*         S0 S1 g0 g1 *)
-(*         f0 f1 i0 i1 *)
-(*         (SIM: simg (fun f_src f_tgt (s0: S0) (s1: S1) => forall r0 r1, *)
-(*                         s0 = g0 r0 -> s1 = g1 r1 -> RR f_src f_tgt r0 r1) f0 f1 *)
-(*                 (g0 <$> i0) (g1 <$> i1)) *)
-(*   : *)
-(*   simg RR f0 f1 i0 i1 *)
-(* . *)
-(* Proof. *)
-(*   i. ginit. revert_until g1. gcofix CIH. i. *)
-(*   unfold fmap in *. ss. unfold ITree.map in *. *)
-(*   remember (` x : R0 <- i0;; Ret (g0 x)) as tmp0. *)
-(*   remember (` x : R1 <- i1;; Ret (g1 x)) as tmp1. *)
-(*   revert Heqtmp0 Heqtmp1. *)
-(*   (* remember (fun (s0 : S0) (s1 : S1) => *) *)
-(*   (*          forall (r0 : R0) (r1 : R1), s0 = g0 r0 -> s1 = g1 r1 -> RR r0 r1) as tmp2. *) *)
-(*   (* revert Heqtmp2. *) *)
-(*   induction SIM using simg_ind; intros EQ0 EQ1; irw in EQ0; irw in EQ1; csc. *)
-(*   - sym in EQ0. apply eqitree_inv_bind_ret in EQ0. *)
-(*     sym in EQ1. apply eqitree_inv_bind_ret in EQ1. *)
-(*     des. subst. clarify. gstep. econs; eauto. *)
-(*   - sym in EQ0. eapply eqitree_inv_bind_vis in EQ0. *)
-(*     sym in EQ1. eapply eqitree_inv_bind_vis in EQ1. des; clarify. *)
-(*     rewrite <- ! bind_trigger. gstep. econs; eauto. *)
-(*     i. subst. gbase. eapply CIH. rewrite EQ3. rewrite EQ2. eauto. *)
-(*   - sym in EQ0. eapply eqitree_inv_bind_tau in EQ0. des; clarify. *)
-(*     guclo simg_indC_spec. econs; eauto. *)
-(* Abort. *)
-
-(** YJ: I think we need an induction principle without the tail. @minki ? **)
-
 Lemma simg_ret_inv_l
         R0 R1 R2 (eq0: R0 -> R2 -> Prop) (eq1: R1 -> R2 -> Prop)
         f0 f1 r0 r1 i1
@@ -1489,10 +1421,10 @@ Section INIT.
     | @VisF _ _ _ X (inr1 e) ktr => Vis e (fun x => initialize (ktr x))
     end.
 
-  Lemma observe_initialize 
+  Lemma observe_initialize
         R (itr: itree (E +' eventE) R)
     :
-    observe (initialize itr) = 
+    observe (initialize itr) =
       match (observe itr) with
       | RetF r => RetF r
       | TauF ktr => TauF (initialize ktr)
@@ -1535,10 +1467,10 @@ Section INIT.
     | @VisF _ _ _ X (e) ktr => Vis (inr1 e) (fun x => embed_E (ktr x))
     end.
 
-  Lemma observe_embed_E 
+  Lemma observe_embed_E
         R (itr: itree (eventE) R)
     :
-    observe (embed_E itr) = 
+    observe (embed_E itr) =
       match (observe itr) with
       | RetF r => RetF r
       | TauF ktr => TauF (embed_E ktr)
@@ -1936,58 +1868,3 @@ But this is beyond the scope of previous works (ITrees).
   Qed.
 
 End ITER.
-
-
-(* Variant _simg_safe *)
-(*           (simg: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop) *)
-(*           {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: Ord.t): (itree (E +' eventE) R0) -> (itree (E +' eventE) R1) -> Prop := *)
-(* | simg_safe_ret *)
-(*     r_src r_tgt *)
-(*     (SIM: RR r_src r_tgt) *)
-(*   : *)
-(*     _simg_safe simg RR f_src f_tgt (Ret r_src) (Ret r_tgt) *)
-(* | simg_safe_syscall *)
-(*     ktr_src0 ktr_tgt0 fn varg rvs *)
-(*     (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR true true (ktr_src0 x_src) (ktr_tgt0 x_tgt)) *)
-(*   : *)
-(*     _simg_safe simg RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0) *)
-
-(* | simg_safe_tauL *)
-(*     itr_src0 itr_tgt0 *)
-(*     (TAUL: True) *)
-(*     (SIM: simg _ _ RR true f_tgt itr_src0 itr_tgt0) *)
-(*   : *)
-(*     _simg_safe simg RR f_src f_tgt (tau;; itr_src0) (itr_tgt0) *)
-(* | simg_safe_tauR *)
-(*     itr_src0 itr_tgt0 *)
-(*     (TAUR: True) *)
-(*     (SIM: simg _ _ RR f_src true itr_src0 itr_tgt0) *)
-(*   : *)
-(*     _simg_safe simg RR f_src f_tgt (itr_src0) (tau;; itr_tgt0) *)
-
-(* | simg_safe_chooseR *)
-(*     X itr_src0 ktr_tgt0 *)
-(*     (CHOOSER: True) *)
-(*     (SIM: forall x, simg _ _ RR f_src true itr_src0 (ktr_tgt0 x)) *)
-(*   : *)
-(*     _simg_safe simg RR f_src f_tgt (itr_src0) (trigger (Choose X) >>= ktr_tgt0) *)
-
-(* | simg_safe_takeL *)
-(*     X ktr_src0 itr_tgt0 *)
-(*     (TAKEL: True) *)
-(*     (SIM: forall x, simg _ _ RR true f_tgt (ktr_src0 x) itr_tgt0) *)
-(*   : *)
-(*     _simg_safe simg RR f_src f_tgt (trigger (Take X) >>= ktr_src0) (itr_tgt0) *)
-(* . *)
-
-(* Lemma simg_safe_spec: *)
-(*   _simg_safe <8= gupaco7 _simg (cpn7 _simg). *)
-(* Proof. *)
-(*   i. eapply simg_indC_spec. inv PR. *)
-(*   { econs; eauto. } *)
-(*   { econs; eauto. } *)
-(*   { econs; eauto. } *)
-(*   { econs; eauto. } *)
-(*   { econs; eauto. } *)
-(*   { econs; eauto. } *)
-(* Qed. *)
