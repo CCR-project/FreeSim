@@ -90,6 +90,20 @@ Section REPLAY.
   Qed.
 End REPLAY.
 
+Lemma replay_mon A B
+      (F0 F1: (A -> Prop) -> (A -> Prop))
+      (G0 G1: (B -> Prop) -> (B -> Prop))
+      c
+      (REPLAY: replay F1 G0 c)
+      (LE0: forall r, F0 r <1= F1 r)
+      (LE1: forall r, G0 r <1= G1 r)
+  :
+  replay F0 G1 c.
+Proof.
+  rr. i. eapply LE1. eapply REPLAY.
+  eapply c.(Galois.alpha_mon); [|eauto]. eauto.
+Qed.
+
 Lemma replay_refl A (F: (A -> Prop) -> (A -> Prop))
   :
   replay F F (Galois.refl A).
@@ -109,6 +123,32 @@ Lemma replay_trans A B C
 Proof.
   rr. i. ss. eapply REPLAY1. eapply c1.(Galois.alpha_mon); [|eapply PR].
   eapply REPLAY0.
+Qed.
+
+Lemma replay_join A B I
+      (F: I -> (A -> Prop) -> (A -> Prop))
+      (G: (B -> Prop) -> (B -> Prop))
+      c
+      (REPLAY: forall i, replay (F i) G c)
+  :
+  replay (fun r x => exists i, F i r x) G c.
+Proof.
+  intros a. eapply c.(Galois.adjunct_iso1). intros. destruct PR.
+  eapply c.(Galois.adjunct_iso0); [eapply REPLAY|]. eauto.
+Qed.
+
+Lemma replay_union A B
+      (F0 F1: (A -> Prop) -> (A -> Prop))
+      (G: (B -> Prop) -> (B -> Prop))
+      c
+      (REPLAY0: replay F0 G c)
+      (REPLAY1: replay F1 G c)
+  :
+  replay (fun r x => F0 r x \/ F1 r x) G c.
+Proof.
+  intros a. eapply c.(Galois.adjunct_iso1). intros. destruct PR.
+  { eapply c.(Galois.adjunct_iso0); [eapply REPLAY0|]. eauto. }
+  { eapply c.(Galois.adjunct_iso0); [eapply REPLAY1|]. eauto. }
 Qed.
 
 
