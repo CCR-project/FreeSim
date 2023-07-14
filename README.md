@@ -132,6 +132,7 @@ to `freesim_replay_fdsim`.
 - Rest of Fig.12: `free_simulation_behavior_improves, Section ADEQUACY_ALTS` in `compcert/FreeSim.v`
 Section 6.2 (DTree)
 - Fig. 13 (Definitions): `dtree` in `sim/Tutorial.v`, `eventE` in `sim/ModSemE.v`, `dualize` in `SimGlobalIndexFacts.v`
+
 The rest (`iter`, `interp`, `stateT`, `interp_state`) originates from ITrees library.
 - Simulation: `sim/SimGlobalIndex.v` and `sim/SimGlobalIndexFacts.v`
 - upper rectangle in Fig. 14: `eutt_simg, bindC, euttC, simg_trans, dualizeC` in `sim/SimGlobalIndexFacts.v`
