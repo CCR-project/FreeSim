@@ -8,8 +8,8 @@ the paper (modulo small simplifications for expository purposes) and
 compiles without any problem.
 
 ## Download, installation, and sanity-testing
-The artifact is presented as a Docker image ("FreeSim-docker.tar"), but we
-are also submitting the latest source code ("FreeSim.tar.gz") just in
+The artifact is presented as a Docker image ("FreeSim-docker.zip"), but we
+are also submitting the latest source code ("FreeSim.tar") just in
 case. Both of these are also publicly available
 [here](https://github.com/alxest/FreeSim) and
 [here](https://hub.docker.com/repository/docker/alxest/oopsla23ae).  If
@@ -27,7 +27,7 @@ sure you have internet connection):
 
 or, you can use the Docker image that we submitted:
 
-2. Run `sudo docker load < FreeSim.tar && sudo docker run -it alxest/oopsla23ae /bin/bash`.
+2. Run `unzip FreeSim-docker.zip && sudo docker load < free-sim.tar && sudo docker run -it alxest/oopsla23ae /bin/bash`.
 
 
 ### Installing manually with raw source code
