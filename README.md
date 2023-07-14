@@ -99,6 +99,13 @@ Section 4
 - Freely Stuttering Simulation (Section 4)
   + Fig 7: `Definition sim` in `sim/SimSTSIndex.v`
   + Theorem 4.1 (Adequacy): `Theorem adequacy` in `sim/SimSTSIndex.v`
+  
+Note that our development uses ordinals, whereas in the presentation
+we used parameterized well-founded orders.  However, it is known that
+every well-founded order can be embedded into ordinal numbers.  Such a
+property is formalized in the Ordinal library we use, and can be found
+[here](https://github.com/minkiminki/Ordinal/blob/fa610bb90912c81e0ef1371e6416c46a7540fcc5/src/Ordinal.v#L737).
+It ensures that it is sufficient to work on ordinal numbers.
 
 Section 5
 - Definition 5.1: `Definition replay` in `sim/Replayability.v`
@@ -111,12 +118,13 @@ Section 6.1 (CompCert)
 
 CompCert's simulations (e.g., `forward_simulation` and
 `backward_simulation`) comprise "functor" parts and other minor
-conditions regarding initial states. To state the replayability result, we
-extract these "functor" parts out of these definitions and name them
-`_fsim` and `_bsim` (you can see the correspondence to
+conditions regarding initial states.  To state the replayability
+result, we extract these "functor" parts out of these definitions and
+name them `_fsim` and `_bsim` (you can see the correspondence to
 `forward_simulation` and `backward_simulation` when `r` is renamed
-into `match_states`). Note that these `_fsim` and `_bsim` are independent of
-Paco, and our replayability result are stated with respect to those.
+into `match_states`). Note that these `_fsim` and `_bsim` are
+independent of Paco, and our replayability result are stated with
+respect to those.
 
 There is one thing to note regarding FSim. 
 While we consistently assumed determinism on the target in our
@@ -128,6 +136,13 @@ presentation (assuming determinism on the target) and the precise
 definition in CompCert (assuming determinate on the target and
 receptiveness on the source). The paper's presentation corresponds
 to `freesim_replay_fdsim`.
+
+One may notice that our development for CompCert is entirely orthogonal to the rest of the development. 
+The reason is as follows: our main development is based on and compatible with another project, CCR.
+While, the notion of STS and behavior in both projects are "theoretically" consistent, their formalization in Coq is quite distant. 
+Specifically, the treatment of stuck states and the style in formulating coinductive data types.
+For that reason, we choose to develop the theory separately for now.
+
 - Section 6.1.2: `freesim_replay_xsim, freesim_replay_efsim` in `compcert/FreeSim.v`
 - Rest of Fig.12: `free_simulation_behavior_improves, Section ADEQUACY_ALTS` in `compcert/FreeSim.v`
 Section 6.2 (DTree)
