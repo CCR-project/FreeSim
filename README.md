@@ -137,11 +137,14 @@ definition in CompCert (assuming determinate on the target and
 receptiveness on the source). The paper's presentation corresponds
 to `freesim_replay_fdsim`.
 
-One may notice that our development for CompCert is entirely orthogonal to the rest of the development. 
-The reason is as follows: our main development is based on and compatible with another project, CCR.
-While, the notion of STS and behavior in both projects are "theoretically" consistent, their formalization in Coq is quite distant. 
-Specifically, the treatment of stuck states and the style in formulating coinductive data types.
-For that reason, we choose to develop the theory separately for now.
+One may notice that our development for CompCert is entirely
+orthogonal to the rest of the development.  The reason is as follows:
+our main development is based on and compatible with another project,
+CCR.  While, the notion of STS and behavior in both projects are
+"theoretically" consistent, their formalization in Coq is quite
+distant.  Specifically, the treatment of stuck states and the style in
+formulating coinductive data types.  For that reason, we choose to
+develop the theory separately for now.
 
 - Section 6.1.2: `freesim_replay_xsim, freesim_replay_efsim` in `compcert/FreeSim.v`
 - Rest of Fig.12: `free_simulation_behavior_improves, Section ADEQUACY_ALTS` in `compcert/FreeSim.v`
