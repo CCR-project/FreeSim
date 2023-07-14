@@ -718,7 +718,7 @@ Section REPLAY.
     destruct (classic (exists rv, final_state L1 s1 rv)) as [[rv FIN]|STUCK].
     { exploit FINAL; eauto. intros [DETERM FIN2].
       eapply _freesim_fold. apply _freesim_target_step.
-      { eauto.}
+      { eauto. }
       { intros. exfalso. exploit sd_at_final_nostep; eauto. }
       { intros. eexists _. split; [eapply star_refl|].
         eapply sd_at_final_determ in FIN2; eauto. subst. eauto. } }
