@@ -17,7 +17,7 @@ there is a need to update our artifact in the middle of the review
 process, we will make the latest version available on those links.
 
 ### Installing via Docker image
-1. Install [Docker](https://www.docker.com/) (version 20.10.14 is
+1. Install [Docker](https://www.docker.com/) (version 20.10.22 is
 tested).
 
 Now, you can either use the Docker image from the Docker Hub (make
@@ -44,7 +44,6 @@ opam pin add coq-paco 4.1.2 -y &&
 opam pin add coq-itree 4.0.0 -y &&
 opam pin add coq-ordinal 0.5.2 -y &&
 opam pin add coq-stdpp 1.7.0 -y &&
-opam pin add coq-iris 3.6.0 -y &&
 opam pin add coq-compcert 3.11 -y &&
 opam pin add ocamlbuild 0.14.1 -y
 ```
