@@ -12,7 +12,7 @@ The artifact is presented as a Docker image ("FreeSim-docker.tar"), but we
 are also submitting the latest source code ("FreeSim.tar.gz") just in
 case. Both of these are also publicly available
 [here](https://github.com/alxest/FreeSim) and
-[here](https://hub.docker.com/repository/docker/alxest/popl23ae).  If
+[here](https://hub.docker.com/repository/docker/alxest/oopsla23ae).  If
 there is a need to update our artifact in the middle of the review
 process, we will make the latest version available on those links.
 
@@ -23,11 +23,11 @@ tested).
 Now, you can either use the Docker image from the Docker Hub (make
 sure you have internet connection):
 
-2. Run `sudo docker run -it alxest/popl23ae /bin/bash`
+2. Run `sudo docker run -it alxest/oopsla23ae /bin/bash`
 
 or, you can use the Docker image that we submitted:
 
-2. Run `sudo docker load < FreeSim.tar && sudo docker run -it alxest/popl23ae /bin/bash`.
+2. Run `sudo docker load < FreeSim.tar && sudo docker run -it alxest/oopsla23ae /bin/bash`.
 
 
 ### Installing manually with raw source code
@@ -43,7 +43,6 @@ opam pin add coq 8.15.2 -y &&
 opam pin add coq-paco 4.1.2 -y &&
 opam pin add coq-itree 4.0.0 -y &&
 opam pin add coq-ordinal 0.5.2 -y &&
-opam pin add coq-stdpp 1.7.0 -y &&
 opam pin add coq-compcert 3.11 -y &&
 opam pin add ocamlbuild 0.14.1 -y
 ```
