@@ -107,6 +107,7 @@ Section 5
 
 Section 6.1 (CompCert)
 - Section 6.1.1: `freesim_replay_bsim, freesim_replay_fdsim, freesim_replay_fsim` in `compcert/FreeSim.v`
+
 CompCert's simulations (e.g., `forward_simulation` and
 `backward_simulation`) comprise "functor" parts and other minor
 conditions regarding initial states. To state the replayability result, we
@@ -134,6 +135,7 @@ The rest (`iter`, `interp`, `stateT`, `interp_state`) originates from ITrees lib
 - Simulation: `sim/SimGlobalIndex.v` and `sim/SimGlobalIndexFacts.v`
 - upper rectangle in Fig. 14: `eutt_simg, bindC, euttC, simg_trans, dualizeC` in `sim/SimGlobalIndexFacts.v`
 - lower rectangle in Fig. 14: `simg_iter, simg_interp, simg_interp_state, dualize_involution, dualize_bind, dualize_iter, dualize_interp` in `sim/SimGlobalIndexFacts.v`
+
 Note that euttge (≳) is a stronger relation that eutt (≈).
 - More examples (not in the paper): `sim/Tutorial.v`
 
