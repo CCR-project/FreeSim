@@ -90,6 +90,7 @@ Section 2
 Section 3
 - Fig 4: see Section 4 (Fig 7)
 - REFL+/SEQ+: `Theorem simg_refl, Definition bindC` in `sim/SimGlobalIndexFacts.v`
+
 SEQ+ is a special case of bindC. "a; b" is a syntactic sugar for "_ <- a; b" in ITrees.
 - Fig 5: see Section 5 (Definition 5.1)
 - Fig 6: see Section 4 (Fig 7)
