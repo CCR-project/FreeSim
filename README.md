@@ -1,6 +1,6 @@
 # Stuttering For Free
 
-This is the artifact for the paper "Conditional Contextual Refinement".
+This is the artifact for the paper "Stuttering For Free".
 
 ## List of Claims
 We claim that the artifact provides Coq development for the results in
