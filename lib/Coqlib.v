@@ -83,7 +83,7 @@ Definition is_some {X} (x: option X): bool :=
 
 Definition is_none {X} := negb <*> (@is_some X).
 
-Hint Unfold is_some is_none.
+#[export] Hint Unfold is_some is_none: core.
 
 
 Notation "x $" := ((proj1_sig x)) (at level 50, no associativity (* , only parsing *)).
@@ -95,7 +95,7 @@ Notation top4 := (fun _ _ _ _ => True).
 Notation top5 := (fun _ _ _ _ _ => True).
 Notation top6 := (fun _ _ _ _ _ _ => True).
 
-Hint Unfold Basics.compose.
+#[export] Hint Unfold Basics.compose: core.
 
 
 (* Note: not clos_refl_trans. That is not well-founded.. *)
@@ -147,7 +147,7 @@ Definition o_join A (a: option (option A)): option A :=
   end.
 
 Definition o_bind A B (oa: option A) (f: A -> option B): option B := o_join (o_map oa f).
-Hint Unfold o_map o_join o_bind.
+#[export] Hint Unfold o_map o_join o_bind: core.
 
 Definition curry2 A B C (f: A -> B -> C): (A * B) -> C := fun ab => f (fst ab) (snd ab).
 
@@ -158,13 +158,15 @@ o_join (o_map oab (curry2 f)).
 
 (* Copied from Errors.v *)
 
+Declare Scope o_monad_scope.
+
 Notation "'do' X <- A ; B" := (o_bind A (fun X => B))
- (at level 200, X ident, A at level 100, B at level 200)
+ (at level 200, X name, A at level 100, B at level 200)
  : o_monad_scope.
 
 
 Notation "'do' ( X , Y ) <- A ; B" := (o_bind2 A (fun X Y => B))
- (at level 200, X ident, Y ident, A at level 100, B at level 200)
+ (at level 200, X name, Y name, A at level 100, B at level 200)
  : o_monad_scope.
 
 Notation "'assertion' A ; B" := (if A then B else None)
@@ -181,7 +183,7 @@ Proof. des_ifs. Qed.
 
 Ltac subst_locals := all ltac:(fun H => is_local_definition H; subst H).
 
-Hint Unfold flip.
+#[export] Hint Unfold flip: core.
 
 Notation "p -1 q" := (p /1\ ~1 q) (at level 50).
 Notation "p -2 q" := (p /2\ ~2 q) (at level 50).
@@ -210,8 +212,6 @@ Ltac dsplit_r := eapply dependent_split_right.
 Ltac dsplit_l := eapply dependent_split_left.
 Ltac dsplits :=
   repeat (let NAME := fresh "SPLITHINT" in try (dsplit_r; [|intro NAME])).
-
-Locate des_sumbool.
 
 
 
@@ -285,7 +285,11 @@ Ltac clear_until_bar :=
                                end).
 
 Goal True -> True -> False.
-  intro. bar. intro. clear_until H0. clear_until H. Undo 2. clear_until_bar. clear_tac.
+  intro. bar. intro. clear_until H0. clear_until H.
+Abort.
+
+Goal True -> True -> False.
+  intro. bar. clear_until_bar. clear_tac.
 Abort.
 
 
@@ -441,9 +445,9 @@ Proof.
 Qed.
 
 (* copied from : https://robbertkrebbers.nl/research/ch2o/tactics.html *)
-Hint Extern 998 (_ = _) => f_equal : f_equal.
-Hint Extern 999 => congruence : congruence.
-Hint Extern 1000 => lia : lia.
+#[export] Hint Extern 998 (_ = _) => f_equal : f_equal.
+#[export] Hint Extern 999 => congruence : congruence.
+#[export] Hint Extern 1000 => lia : lia.
 
 
 
@@ -476,9 +480,9 @@ Ltac congr := congruence.
 Notation rtc := (clos_refl_trans_1n _). (* reflexive transitive closure *)
 Notation rc := (clos_refl _). (* reflexive transitive closure *)
 Notation tc := (clos_trans _). (* transitive closure *)
-Hint Immediate rt1n_refl rt1n_trans t_step.
+#[export] Hint Immediate rt1n_refl rt1n_trans t_step: core.
 
-Program Instance rtc_PreOrder A (R:A -> A -> Prop): PreOrder (rtc R).
+#[export] Program Instance rtc_PreOrder A (R:A -> A -> Prop): PreOrder (rtc R).
 Next Obligation.
   ii. revert H0. induction H; auto. i. exploit IHclos_refl_trans_1n; eauto.
 Qed.
@@ -556,9 +560,9 @@ Goal forall (mytt: unit) (HH: unit -> (True -> True /\ True)), False.
   i. hexpl HH ABC. hexpl HH.
 Abort.
 
-Hint Extern 997 => lia : lia.
+#[export] Hint Extern 997 => lia : lia.
 
-Hint Rewrite
+#[export] Hint Rewrite
      Z.add_0_l Z.add_0_r Z.add_assoc Z.add_simpl_l Z.add_simpl_r Z.add_opp_r Z.add_opp_l
      Z.mul_0_l Z.mul_0_r Z.mul_assoc
      Z.sub_0_r Z.sub_diag Z.sub_simpl_l Z.sub_simpl_r Z.sub_0_l
@@ -592,7 +596,7 @@ Ltac simpl_bool := unfold Datatypes.is_true in *; unfold is_true in *; autorewri
 Ltac bsimpl := simpl_bool.
 
 Definition range (lo hi: Z): Z -> Prop := fun x => lo <= x < hi. (* TODO: Use Notation instead *)
-Hint Unfold range.
+#[export] Hint Unfold range: core.
 
 Ltac sym := symmetry.
 Tactic Notation "sym" "in" hyp(H) := symmetry in H.
@@ -870,10 +874,10 @@ Let put_dummy_arg22 A B DUMMY C: (A -> B -> C) -> (A -> B -> DUMMY -> C) :=
   fun f => (flip2 (flip (fun _ => f))).
 
 End FLIPS.
-Hint Unfold flip2 flip3 flip4.
+#[export] Hint Unfold flip2 flip3 flip4: core.
 
 Definition DUMMY_PROP := True.
-Hint Unfold DUMMY_PROP.
+#[export] Hint Unfold DUMMY_PROP: core.
 
 Lemma firstn_S
       (A: Type) (l: list A) n:
@@ -1507,7 +1511,7 @@ Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
   :
     option_rel P None None
 .
-Hint Constructors option_rel: core.
+#[export] Hint Constructors option_rel: core.
 
 Definition map_or_else X Y (ox: option X) (f: X -> Y) (d: Y) :=
   match ox with | Some x => f x | None => d end.

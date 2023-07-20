@@ -68,7 +68,7 @@ Require Import Orders.
 
 Module Sk.
   Class ld: Type := mk {
-    t:> Type;
+    t: Type;
     unit: t;
     add: t -> t -> t;
     canon: t -> t;
@@ -199,7 +199,7 @@ Module Sk.
     forall gn gd (IN: List.In (gn, gd) sk0),
       List.In (gn, gd) sk1.
 
-  Program Instance incl_PreOrder: PreOrder incl.
+  #[export] Program Instance incl_PreOrder: PreOrder incl.
   Next Obligation.
   Proof.
     ii. ss.
@@ -290,3 +290,4 @@ Module Sk.
   Qed.
 
 End Sk.
+#[export] Existing Instance Sk.incl_PreOrder.

@@ -236,9 +236,9 @@ Section EXP_SIM.
   Hint Resolve cpn6_wcompat: paco.
 
 End EXP_SIM.
-Hint Unfold simg_alt_exp.
-Hint Resolve simg_alt_exp_mon: paco.
-Hint Resolve cpn6_wcompat: paco.
+#[export] Hint Unfold simg_alt_exp: core.
+#[export] Hint Resolve simg_alt_exp_mon: paco.
+#[export] Hint Resolve cpn6_wcompat: paco.
 
 
 Section IMP_SIM.
@@ -530,7 +530,7 @@ Section IMP_SIM.
   Qed.
 
 End IMP_SIM.
-Hint Constructors _simg_alt_imp.
-Hint Unfold simg_alt_imp.
-Hint Resolve simg_alt_imp_mon: paco.
-Hint Resolve cpn5_wcompat: paco.
+#[export] Hint Constructors _simg_alt_imp: core.
+#[export] Hint Unfold simg_alt_imp: core.
+#[export] Hint Resolve simg_alt_imp_mon: paco.
+#[export] Hint Resolve cpn5_wcompat: paco.

@@ -323,8 +323,8 @@ Section SIM.
 
   Definition sim: _ -> _ -> _ -> _ -> Prop := paco4 _sim bot4.
 
-  Hint Constructors _sim.
-  Hint Unfold sim.
+  Hint Constructors _sim: core.
+  Hint Unfold sim: core.
   Hint Resolve sim_mon: paco.
   Hint Resolve cpn4_wcompat: paco.
 
@@ -635,7 +635,7 @@ Section SIM.
       + eapply IHO; eauto.
   Qed.
 End SIM.
-Hint Constructors _sim.
-Hint Unfold sim.
-Hint Resolve sim_mon: paco.
-Hint Resolve cpn4_wcompat: paco.
+#[export] Hint Constructors _sim: core.
+#[export] Hint Unfold sim: core.
+#[export] Hint Resolve sim_mon: paco.
+#[export] Hint Resolve cpn4_wcompat: paco.

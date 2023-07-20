@@ -177,7 +177,7 @@ Section SIM.
 
 End SIM.
 
-Hint Constructors _simg_exp.
-Hint Unfold simg_exp.
-Hint Resolve simg_exp_mon: paco.
-Hint Resolve cpn7_wcompat: paco.
+#[export] Hint Constructors _simg_exp: core.
+#[export] Hint Unfold simg_exp: core.
+#[export] Hint Resolve simg_exp_mon: paco.
+#[export] Hint Resolve cpn7_wcompat: paco.
