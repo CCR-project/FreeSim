@@ -13,6 +13,11 @@ From Ordinal Require Import ClassicalOrdinal.
 
 Require Import SimGlobalIndex SimGlobalEquiv SimGlobalIndexFacts.
 
+From ExtLib Require Import
+     Monad
+     Traversable
+     Data.List.
+
 Set Implicit Arguments.
 
 (**************************************************************************************************)
@@ -235,11 +240,6 @@ Definition fib_body : nat -> itree (Recursion.callE nat nat +' E) nat
 
 Definition fib n : itree E nat :=
   rec fib_body n.
-
-From ExtLib Require Import
-     Monad
-     Traversable
-     Data.List.
 
 Example fib_3_6 : mapT fib [4;5;6] ⪸ Ret [3; 5; 8].
 Proof.

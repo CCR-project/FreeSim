@@ -82,8 +82,8 @@ Proof.
   - des. econs 2; et. esplits; et.
 Qed.
 
-Hint Constructors _state_spin.
-Hint Unfold state_spin.
+Hint Constructors _state_spin: core.
+Hint Unfold state_spin: core.
 Hint Resolve state_spin_mon: paco.
 
 
@@ -178,8 +178,8 @@ Proof.
   - econs 6; et. ii. exploit STEP; eauto. i; des; clarify.
 Qed.
 
-Hint Constructors _of_state.
-Hint Unfold of_state.
+Hint Constructors _of_state: core.
+Hint Unfold of_state: core.
 Hint Resolve of_state_mon: paco.
 
 Definition of_program: Tr.t -> Prop := of_state L.(initial_state).
@@ -375,10 +375,10 @@ Qed.
 End BEHAVES.
 
 End Beh.
-Hint Unfold Beh.improves.
-Hint Constructors Beh._state_spin.
-Hint Unfold Beh.state_spin.
-Hint Resolve Beh.state_spin_mon: paco.
-Hint Constructors Beh._of_state.
-Hint Unfold Beh.of_state.
-Hint Resolve Beh.of_state_mon: paco.
+#[export] Hint Unfold Beh.improves: core.
+#[export] Hint Constructors Beh._state_spin: core.
+#[export] Hint Unfold Beh.state_spin: core.
+#[export] Hint Resolve Beh.state_spin_mon: paco.
+#[export] Hint Constructors Beh._of_state: core.
+#[export] Hint Unfold Beh.of_state: core.
+#[export] Hint Resolve Beh.of_state_mon: paco.

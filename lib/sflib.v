@@ -16,7 +16,7 @@ Require Import Bool List Arith ZArith String Program.
 
 Set Implicit Arguments.
 
-Hint Unfold not iff id.
+#[export] Hint Unfold not iff id: core.
 
 Export ListNotations.
 
@@ -45,7 +45,7 @@ Proof. intros []; (reflexivity || discriminate). Qed.
 Lemma sflib__andb_split: forall {b1 b2}, b1 && b2 -> b1 /\ b2.
 Proof. intros [] []; try discriminate; auto. Qed.
 
-Hint Resolve sflib__true_is_true sflib__not_false_is_true.
+#[export] Hint Resolve sflib__true_is_true sflib__not_false_is_true: core.
 
 (* ************************************************************************** *)
 (** * Basic automation tactics *)
@@ -183,7 +183,7 @@ Notation "<< t >>" := (NW (fun _ => (t):Prop)) (at level 79, no associativity, o
 Ltac unnw := unfold NW in *.
 Ltac rednw := red; unnw.
 
-Hint Unfold NW.
+#[export] Hint Unfold NW: core.
 
 Ltac get_concl := lazymatch goal with [ |- ?G ] => G end.
 
@@ -1229,14 +1229,14 @@ Ltac abstr_aux x var_name :=
 Tactic Notation "abstr" constr(H) := let var_name := fresh "abstr_var_name" in abstr_aux H var_name.
 Tactic Notation "abstr" constr(H) ident(var_name) := abstr_aux H var_name.
 
-Hint Rewrite
-     andb_true_iff andb_false_iff
-     orb_true_iff orb_false_iff
-     negb_true_iff negb_false_iff
+#[export] Hint Rewrite
+ andb_true_iff andb_false_iff
+ orb_true_iff orb_false_iff
+ negb_true_iff negb_false_iff
 
-     andb_true_r andb_true_l andb_false_r andb_false_l
-     orb_true_r orb_true_l orb_false_r orb_false_l
-     negb_andb negb_orb negb_involutive
+ andb_true_r andb_true_l andb_false_r andb_false_l
+ orb_true_r orb_true_l orb_false_r orb_false_l
+ negb_andb negb_orb negb_involutive
   : simpl_bool.
 
 Ltac simpl_bool := unfold Datatypes.is_true; unfold is_true;  autorewrite with simpl_bool in *.

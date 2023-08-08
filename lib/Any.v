@@ -134,4 +134,4 @@ Notation "a ↓" := (Any.downcast a) (at level 9, only parsing).
 Notation "(↑)" := (Any.upcast) (only parsing).
 Notation "(↓)" := (Any.downcast) (only parsing).
 Goal (tt↑↓) = Some tt. rewrite Any.upcast_downcast. ss. Qed.
-Check (Any.pair tt↑ tt↑).
+(* Check (Any.pair tt↑ tt↑). *)
