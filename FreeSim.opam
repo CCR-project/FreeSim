@@ -5,7 +5,7 @@ license: "BSD-3-Clause"
 homepage: "https://github.com/CCR-project/FreeSim"
 bug-reports: "https://github.com/CCR-project/FreeSim/issues"
 dev-repo: "git+https://github.com/CCR-project/FreeSim.git"
-version: "1.0"
+version: "1.0.0"
 
 synopsis: "Stuttering For Free"
 description: """
