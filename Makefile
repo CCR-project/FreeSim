@@ -1,4 +1,4 @@
-COQMODULE    := SimComp
+COQMODULE    := FreeSim
 COQTHEORIES  := $(shell find . -not -path "./deprecated/*" -not -path "./_opam/*" -iname '*.v')
 
 .PHONY: all proof proof-quick graph
