@@ -937,7 +937,7 @@ Section REFINE.
    .
 
    Definition refines_strong (md_tgt md_src: ModL.t): Prop :=
-     forall {CONF: EMSConfig}, refines md_tgt md_src.
+     forall (CONF: EMSConfig), refines md_tgt md_src.
 
    Section CONF.
    Context {CONF: EMSConfig}.
@@ -1197,7 +1197,7 @@ Global Existing Instance Sk.gdefs.
 Arguments Sk.unit: simpl never.
 Arguments Sk.add: simpl never.
 Arguments Sk.wf: simpl never.
-Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
+(* Coercion Sk.load_skenv: Sk.t >-> SkEnv.t. *)
 Global Opaque Sk.load_skenv.
 
 

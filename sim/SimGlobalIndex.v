@@ -444,9 +444,9 @@ Qed.
 
 End TY.
 End SIM.
-Hint Constructors _simg.
-Hint Unfold simg.
-Hint Resolve simg_mon: paco.
-Hint Constructors simg_indC: core.
-Hint Resolve simg_indC_mon: paco.
-Hint Resolve cpn7_wcompat: paco.
+#[export] Hint Constructors _simg: core.
+#[export] Hint Unfold simg: core.
+#[export] Hint Resolve simg_mon: paco.
+#[export] Hint Constructors simg_indC: core.
+#[export] Hint Resolve simg_indC_mon: paco.
+#[export] Hint Resolve cpn7_wcompat: paco.

@@ -40,7 +40,7 @@ Notation "t1 >>= k2" := (ITree.bind t1 k2)
 Notation "x <- t1 ;; t2" := (ITree.bind t1 (fun x => t2))
   (at level 62, t1 at next level, right associativity) : itree_scope.
 Notation "` x : t <- t1 ;; t2" := (ITree.bind t1 (fun x : t => t2))
-  (at level 62, t at next level, t1 at next level, x ident, right associativity) : itree_scope.
+  (at level 62, t at next level, t1 at next level, x name, right associativity) : itree_scope.
 Notation "t1 ;;; t2" := (ITree.bind t1 (fun _ => t2))
   (at level 62, right associativity) : itree_scope.
 Notation "' p <- t1 ;; t2" :=
@@ -86,9 +86,9 @@ Qed.
 Ltac f_equiv := first [eapply eutt_eq_bind|eapply eqit_VisF|Morphisms.f_equiv].
 (* eapply eqit_bind'| *)
 
-Hint Rewrite @bind_trigger : itree.
-Hint Rewrite @tau_eutt : itree.
-Hint Rewrite @bind_tau : itree.
+#[export] Hint Rewrite @bind_trigger : itree.
+#[export] Hint Rewrite @tau_eutt : itree.
+#[export] Hint Rewrite @bind_tau : itree.
 
 (* Tactic Notation "irw" "in" ident(H) := repeat (autorewrite with itree in H; cbn in H). *)
 (* Tactic Notation "irw" := repeat (autorewrite with itree; cbn). *)
@@ -177,13 +177,13 @@ Lemma interp_mrec_bind:
 Proof. ii. f. eapply interp_mrec_bind. Qed.
 
 
-Hint Rewrite unfold_interp_mrec : itree_axiom.
-Hint Rewrite bind_ret_l : itree_axiom.
-Hint Rewrite bind_ret_r : itree_axiom.
-Hint Rewrite bind_tau : itree_axiom.
-Hint Rewrite bind_vis : itree_axiom.
-Hint Rewrite bind_trigger : itree_axiom.
-Hint Rewrite bind_bind : itree_axiom.
+#[export] Hint Rewrite unfold_interp_mrec : itree_axiom.
+#[export] Hint Rewrite bind_ret_l : itree_axiom.
+#[export] Hint Rewrite bind_ret_r : itree_axiom.
+#[export] Hint Rewrite bind_tau : itree_axiom.
+#[export] Hint Rewrite bind_vis : itree_axiom.
+#[export] Hint Rewrite bind_trigger : itree_axiom.
+#[export] Hint Rewrite bind_bind : itree_axiom.
 Tactic Notation "irw" "in" ident(H) := repeat (autorewrite with itree_axiom in H; cbn in H).
 Tactic Notation "irw" := repeat (autorewrite with itree_axiom; cbn).
 
@@ -404,7 +404,7 @@ Lemma unfold_update
 .
 Proof. unfold update. uo. des_ifs. Qed.
 
-Hint Unfold update.
+#[export] Hint Unfold update: core.
 
 
 
@@ -544,10 +544,10 @@ Qed.
 Definition resum_itr E F `{E -< F}: itree E ~> itree F := fun _ itr => interp (fun _ e => trigger e) itr.
 
 Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
-Hint Unfold tauK.
+#[export] Hint Unfold tauK: core.
 
 Definition idK {E R}: R -> itree E R := fun r => Ret r.
-Hint Unfold idK.
+#[export] Hint Unfold idK: core.
 
 Lemma idK_spec E R (i0: itree E R): i0 = i0 >>= idK. Proof. unfold idK. irw. refl. Qed.
 

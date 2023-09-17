@@ -421,19 +421,19 @@ Section SIM.
     { eapply EVENT; eauto. i. hexploit SIM; eauto. i. des. split; eauto. pfold. auto. }
   Qed.
 
-  Hint Constructors _simg_aux.
-  Hint Unfold simg_aux.
+  Hint Constructors _simg_aux: core.
+  Hint Unfold simg_aux: core.
   Hint Resolve simg_aux_mon: paco.
   Hint Resolve cpn7_wcompat: paco.
 
 End SIM.
 
-Hint Constructors _simg_aux.
-Hint Unfold simg_aux.
-Hint Resolve simg_aux_mon: paco.
-Hint Constructors simg_aux_indC: core.
-Hint Resolve simg_aux_indC_mon: paco.
-Hint Resolve cpn7_wcompat: paco.
+#[export] Hint Constructors _simg_aux: core.
+#[export] Hint Unfold simg_aux: core.
+#[export] Hint Resolve simg_aux_mon: paco.
+#[export] Hint Constructors simg_aux_indC: core.
+#[export] Hint Resolve simg_aux_indC_mon: paco.
+#[export] Hint Resolve cpn7_wcompat: paco.
 
 Section PROOF.
 
@@ -672,7 +672,7 @@ Section GEN.
 
 End GEN.
 
-Global Hint Constructors gen_exp.
+Global Hint Constructors gen_exp: core.
 
 Section PROOF.
 

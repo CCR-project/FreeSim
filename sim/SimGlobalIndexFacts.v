@@ -10,8 +10,11 @@ Require Import Relation_Operators.
 Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 From Ordinal Require Import ClassicalOrdinal.
+From ITree Require Import HeterogeneousRelations.
 
 Require Import SimGlobalIndex SimGlobalEquiv.
+Require Import SimSTSIndex.
+
 Set Implicit Arguments.
 
 
@@ -1518,8 +1521,6 @@ Ltac rewrite_initialize :=
 Context {CONFS CONFT: EMSConfig}.
 Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
 
-Require Import SimSTSIndex.
-
 Theorem adequacy_global_itree_aux itr_src itr_tgt o_src0 o_tgt0
         (SIM: simg (E:=E) (fun _ _ => eq) o_src0 o_tgt0 itr_src itr_tgt)
   :
@@ -1648,14 +1649,13 @@ Section DUALMORE.
 
 End DUALMORE.
 
-Hint Constructors flagC: core.
-Hint Resolve flagC_mon: paco.
-Hint Constructors bindR: core.
-Hint Unfold bindC: core.
+#[export] Hint Constructors flagC: core.
+#[export] Hint Resolve flagC_mon: paco.
+#[export] Hint Constructors bindR: core.
+#[export] Hint Unfold bindC: core.
 
 
 
-From ITree Require Import HeterogeneousRelations.
 
 Section ITER.
 
@@ -1761,7 +1761,7 @@ But this is beyond the scope of previous works (ITrees).
   Definition trivial_StatefulHandler `{E -< F} {S}: StatefulHandler S E F.
     ii. eapply pure_state; try eassumption. eapply H. eauto.
   Defined.
-  Hint Unfold trivial_StatefulHandler.
+  Hint Unfold trivial_StatefulHandler: core.
 
   Theorem simg_interp_state_aux {E F R0 R1} (RR : Ord.t -> Ord.t -> R0 -> R1 -> Prop)
     (i_src: itree (E +' eventE) R0)
